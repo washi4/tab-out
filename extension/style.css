@@ -1295,3 +1295,158 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   0% { box-shadow: 0 10px 25px rgba(179, 90, 90, 0.4), 0 0 0 0px rgba(179, 90, 90, 0.2); }
   100% { box-shadow: 0 15px 30px rgba(179, 90, 90, 0.6), 0 0 15px 6px rgba(179, 90, 90, 0); }
 }
+
+/* ============================================================
+   Global Search Bar & Filtering Transitions
+   ============================================================ */
+
+.search-container {
+  margin: 16px 0 24px;
+  width: 100%;
+  will-change: transform, opacity;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--warm-gray);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 12px var(--shadow);
+  transition: border-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  will-change: transform, box-shadow;
+}
+
+.search-input-wrapper:focus-within {
+  border-color: var(--accent-amber);
+  box-shadow: 0 8px 20px rgba(200, 113, 58, 0.12), 0 0 0 4px rgba(200, 113, 58, 0.08);
+  transform: translateY(-2px);
+}
+
+.search-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+  margin-right: 12px;
+  flex-shrink: 0;
+  transition: color 0.3s ease;
+}
+
+.search-input-wrapper:focus-within .search-icon {
+  color: var(--accent-amber);
+}
+
+#globalSearch {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+#globalSearch::placeholder {
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.search-shortcut {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  background: rgba(154, 145, 138, 0.12);
+  border: 1px solid rgba(154, 145, 138, 0.18);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: 12px;
+  user-select: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.search-input-wrapper:focus-within .search-shortcut {
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+/* Page chip filtering transition styles */
+.page-chip {
+  transition: background 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+              opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+              max-height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+              padding 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+              margin 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+              border-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  max-height: 100px;
+  overflow: hidden;
+}
+
+.page-chip.filtered-out {
+  opacity: 0;
+  transform: scale(0.85) translateY(-10px);
+  max-height: 0;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  border-bottom: none !important;
+  pointer-events: none;
+}
+
+/* Card filtering transition styles */
+.mission-card {
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+              opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+              max-height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+              margin 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+              padding 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+              box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  max-height: 800px;
+}
+
+.mission-card.card-hidden {
+  opacity: 0;
+  transform: scale(0.9) translateY(-15px);
+  max-height: 0;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Search empty state */
+.search-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 48px 24px;
+  background: var(--card-bg);
+  border: 1px dashed var(--warm-gray);
+  border-radius: 16px;
+  color: var(--muted);
+  font-family: 'Newsreader', serif;
+  font-style: italic;
+  font-size: 18px;
+  animation: searchEmptyFadeIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+@keyframes searchEmptyFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Highlight matching search text */
+.search-highlight {
+  background: rgba(200, 113, 58, 0.15);
+  border-bottom: 1px solid rgba(200, 113, 58, 0.3);
+  border-radius: 2px;
+  padding: 0 1px;
+}

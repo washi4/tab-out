@@ -965,7 +965,8 @@ function buildOverflowChips(hiddenTabs, urlCounts = {}) {
     let domain = '';
     try { domain = new URL(tab.url).hostname; } catch {}
     const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
-    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" title="${safeTitle}">
+    const searchText = `${label} ${tab.url}`.toLowerCase().replace(/"/g, '&quot;');
+    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" data-search-text="${searchText}" title="${safeTitle}">
       ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">` : ''}
       <span class="chip-text">${label}</span>${dupeTag}
       <div class="chip-actions">
@@ -1046,7 +1047,8 @@ function renderDomainCard(group) {
     let domain = '';
     try { domain = new URL(tab.url).hostname; } catch {}
     const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
-    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" title="${safeTitle}">
+    const searchText = `${label} ${tab.url}`.toLowerCase().replace(/"/g, '&quot;');
+    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" data-search-text="${searchText}" title="${safeTitle}">
       ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">` : ''}
       <span class="chip-text">${label}</span>${dupeTag}
       <div class="chip-actions">
@@ -1363,6 +1365,12 @@ async function renderStaticDashboard() {
 
   // --- Render "Saved for Later" column ---
   await renderDeferredColumn();
+
+  // --- Re-apply search filter if active ---
+  const searchInput = document.getElementById('globalSearch');
+  if (searchInput && searchInput.value) {
+    filterTabs(searchInput.value);
+  }
 }
 
 async function renderDashboard() {
@@ -1681,6 +1689,163 @@ document.addEventListener('input', async (e) => {
       || '<div style="font-size:12px;color:var(--muted);padding:8px 0">No results</div>';
   } catch (err) {
     console.warn('[tab-out] Archive search failed:', err);
+  }
+});
+
+
+/* ----------------------------------------------------------------
+   GLOBAL SEARCH & LIVE FILTERING
+   ---------------------------------------------------------------- */
+
+/**
+ * filterTabs(query)
+ *
+ * Synchronously filters DOM elements (.page-chip) and (.mission-card)
+ * based on the user's search query, and toggles the empty state.
+ */
+function filterTabs(query) {
+  const q = query.trim().toLowerCase();
+  
+  const chips = document.querySelectorAll('.page-chip[data-search-text]');
+  const cards = document.querySelectorAll('.mission-card');
+  const emptyState = document.getElementById('searchEmptyState');
+  
+  if (!q) {
+    // Reset everything
+    chips.forEach(chip => {
+      chip.classList.remove('filtered-out');
+      // Restore original text (removing highlights)
+      const textSpan = chip.querySelector('.chip-text');
+      if (textSpan && textSpan.dataset.originalText) {
+        textSpan.innerHTML = textSpan.dataset.originalText;
+      }
+    });
+    
+    cards.forEach(card => {
+      card.classList.remove('card-hidden');
+      // Reset overflow containers if they were expanded due to search
+      const overflow = card.querySelector('.page-chips-overflow');
+      if (overflow && overflow.dataset.wasAutoExpanded) {
+        overflow.style.display = 'none';
+        delete overflow.dataset.wasAutoExpanded;
+        // Re-add expansion link if it was hidden
+        const expandBtn = card.querySelector('[data-action="expand-chips"]');
+        if (expandBtn) expandBtn.style.display = 'flex';
+      }
+    });
+    
+    if (emptyState) emptyState.style.display = 'none';
+    return;
+  }
+  
+  // Track visible cards
+  let visibleCardCount = 0;
+  
+  cards.forEach(card => {
+    const cardChips = card.querySelectorAll('.page-chip[data-search-text]');
+    let hasMatchInCard = false;
+    let hasMatchInOverflow = false;
+    
+    cardChips.forEach(chip => {
+      const text = chip.dataset.searchText || '';
+      const textSpan = chip.querySelector('.chip-text');
+      
+      // Store original text for restoring later
+      if (textSpan && !textSpan.dataset.originalText) {
+        textSpan.dataset.originalText = textSpan.innerHTML;
+      }
+      
+      if (text.includes(q)) {
+        chip.classList.remove('filtered-out');
+        hasMatchInCard = true;
+        
+        // Check if chip is inside the overflow container
+        if (chip.parentElement.classList.contains('page-chips-overflow')) {
+          hasMatchInOverflow = true;
+        }
+        
+        // Highlight matched text
+        if (textSpan) {
+          const original = textSpan.dataset.originalText;
+          const regex = new RegExp(`(${escapeRegExp(q)})`, 'gi');
+          textSpan.innerHTML = original.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+      } else {
+        chip.classList.add('filtered-out');
+        // Restore original text if not matched
+        if (textSpan && textSpan.dataset.originalText) {
+          textSpan.innerHTML = textSpan.dataset.originalText;
+        }
+      }
+    });
+    
+    // Auto-expand overflow container if a match is found inside it
+    const overflow = card.querySelector('.page-chips-overflow');
+    const expandBtn = card.querySelector('[data-action="expand-chips"]');
+    if (overflow) {
+      if (hasMatchInOverflow) {
+        overflow.style.display = 'contents';
+        overflow.dataset.wasAutoExpanded = 'true';
+        if (expandBtn) expandBtn.style.display = 'none';
+      } else {
+        // If no match in overflow, hide it unless it was manually expanded
+        if (overflow.dataset.wasAutoExpanded) {
+          overflow.style.display = 'none';
+          delete overflow.dataset.wasAutoExpanded;
+          if (expandBtn) expandBtn.style.display = 'flex';
+        }
+      }
+    }
+    
+    if (hasMatchInCard) {
+      card.classList.remove('card-hidden');
+      visibleCardCount++;
+    } else {
+      card.classList.add('card-hidden');
+    }
+  });
+  
+  // Toggle zero matches empty state
+  if (emptyState) {
+    emptyState.style.display = visibleCardCount === 0 ? 'block' : 'none';
+  }
+}
+
+/**
+ * escapeRegExp(string)
+ *
+ * Helper to escape special characters for regex matching.
+ */
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ---- Global tab search — filter open tabs as user types ----
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'globalSearch') return;
+  filterTabs(e.target.value);
+});
+
+// ---- Key bindings for quick search and escape ----
+document.addEventListener('keydown', (e) => {
+  const active = document.activeElement;
+  const isInput = active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable;
+  
+  // Press '/' to search
+  if (e.key === '/' && !isInput) {
+    e.preventDefault();
+    const searchInput = document.getElementById('globalSearch');
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.select();
+    }
+  }
+  
+  // Press 'Esc' to clear and blur
+  if (e.key === 'Escape' && active.id === 'globalSearch') {
+    active.value = '';
+    filterTabs('');
+    active.blur();
   }
 });
 
