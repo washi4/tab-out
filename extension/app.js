@@ -1240,14 +1240,14 @@ document.addEventListener('click', async (e) => {
 
     playCloseSound();
 
-    // Animate the chip row out
+    // Animate the chip row out (slides left to discard)
     const chip = actionEl.closest('.page-chip');
     if (chip) {
       const rect = chip.getBoundingClientRect();
       shootConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
-      chip.style.transition = 'opacity 0.2s, transform 0.2s';
+      chip.style.transition = 'opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1)';
       chip.style.opacity    = '0';
-      chip.style.transform  = 'scale(0.8)';
+      chip.style.transform  = 'translateX(-30px) scale(0.95)';
       setTimeout(() => {
         chip.remove();
         // If the card now has no tabs, remove it too
@@ -1291,13 +1291,13 @@ document.addEventListener('click', async (e) => {
     if (match) await chrome.tabs.remove(match.id);
     await fetchOpenTabs();
 
-    // Animate chip out
+    // Animate chip out (slides right towards Saved for Later sidebar)
     const chip = actionEl.closest('.page-chip');
     if (chip) {
-      chip.style.transition = 'opacity 0.2s, transform 0.2s';
+      chip.style.transition = 'opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1)';
       chip.style.opacity    = '0';
-      chip.style.transform  = 'scale(0.8)';
-      setTimeout(() => chip.remove(), 200);
+      chip.style.transform  = 'translateX(30px) scale(0.95)';
+      setTimeout(() => chip.remove(), 250);
     }
 
     showToast('Saved for later');
@@ -1446,7 +1446,7 @@ document.addEventListener('click', (e) => {
   toggle.classList.toggle('open');
   const body = document.getElementById('archiveBody');
   if (body) {
-    body.style.display = body.style.display === 'none' ? 'block' : 'none';
+    body.classList.toggle('open');
   }
 });
 

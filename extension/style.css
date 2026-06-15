@@ -136,13 +136,21 @@ header {
   background: var(--accent-amber);
   color: white;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
   white-space: nowrap;
+  will-change: transform;
 }
 
 .tab-cleanup-btn:hover {
-  opacity: 0.85;
+  background: #b5612c; /* slightly darker amber for hover */
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(200, 113, 58, 0.2);
+}
+
+.tab-cleanup-btn:active {
+  transform: translateY(1px) scale(0.96);
+  box-shadow: 0 1px 3px rgba(200, 113, 58, 0.1);
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
 }
 
 /* ---- Nudge banner ---- */
@@ -231,12 +239,13 @@ header {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  transition: box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.4s ease, opacity 0.3s ease;
   cursor: pointer;
   position: relative;
   overflow: hidden;
   break-inside: avoid;       /* don't split a card across columns */
   margin-bottom: 12px;       /* vertical spacing (replaces grid gap) */
+  will-change: transform, box-shadow;
 }
 
 /* Colored top border instead of side bar for grid cards */
@@ -255,8 +264,15 @@ header {
 .mission-card.has-neutral-bar::before { background: var(--warm-gray); }
 
 .mission-card:hover {
-  box-shadow: 0 4px 20px var(--shadow);
-  transform: translateY(-1px);
+  box-shadow: 0 12px 28px -5px rgba(26, 22, 19, 0.08), 0 8px 16px -8px rgba(26, 22, 19, 0.04);
+  border-color: rgba(200, 113, 58, 0.25);
+  transform: translateY(-4px);
+}
+
+.mission-card:active {
+  transform: translateY(-1px) scale(0.985);
+  box-shadow: 0 4px 10px -2px rgba(26, 22, 19, 0.06);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 /* Closing animation — card scales down and fades out */
@@ -427,8 +443,9 @@ header {
   padding: 4px;
   border-radius: 4px;
   opacity: 0.35;
-  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  transition: opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
   flex-shrink: 0;
+  will-change: transform;
 }
 
 .chip-action svg {
@@ -439,6 +456,12 @@ header {
 .chip-action:hover {
   opacity: 1;
   background: rgba(154, 145, 138, 0.1);
+  transform: scale(1.15);
+}
+
+.chip-action:active {
+  transform: scale(0.85);
+  transition: transform 0.05s ease;
 }
 
 .chip-save:hover {
@@ -453,11 +476,13 @@ header {
 
 .page-chip.clickable {
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  will-change: transform;
 }
 
 .page-chip.clickable:hover {
   background: rgba(200, 113, 58, 0.04);
+  transform: translateX(4px);
 }
 
 /* "+N more" overflow chip */
@@ -507,15 +532,24 @@ header {
   background: var(--card-bg);
   color: var(--muted);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  will-change: transform;
 }
 
 .action-btn:hover {
   border-color: var(--ink);
   color: var(--ink);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(26, 22, 19, 0.04);
+}
+
+.action-btn:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 1px 3px rgba(26, 22, 19, 0.02);
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
 }
 
 .action-btn svg {
@@ -947,12 +981,18 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   cursor: pointer;
   flex-shrink: 0;
   margin-top: 1px;
-  transition: all 0.2s;
+  transition: background 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
   position: relative;
+  will-change: transform;
 }
 
 .deferred-checkbox:hover {
   border-color: var(--accent-sage);
+  transform: scale(1.1);
+}
+
+.deferred-checkbox:active {
+  transform: scale(0.9);
 }
 
 .deferred-checkbox:checked {
@@ -1020,9 +1060,10 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   cursor: pointer;
   padding: 2px;
   opacity: 0.3;
-  transition: opacity 0.15s, color 0.15s;
+  transition: opacity 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), color 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
   flex-shrink: 0;
   margin-top: 1px;
+  will-change: transform;
 }
 
 .deferred-dismiss svg {
@@ -1033,6 +1074,11 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
 .deferred-dismiss:hover {
   opacity: 1;
   color: var(--status-abandoned);
+  transform: scale(1.15);
+}
+
+.deferred-dismiss:active {
+  transform: scale(0.85);
 }
 
 /* Slide-out animation for items being removed */
@@ -1096,6 +1142,16 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
 }
 
 .archive-body {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding-top: 0;
+  transition: max-height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease, padding 0.3s ease;
+}
+
+.archive-body.open {
+  max-height: 800px;
+  opacity: 1;
   padding-top: 12px;
 }
 
