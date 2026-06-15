@@ -23,10 +23,30 @@ Enhance the physical feel and responsiveness of the Tab Out dashboard. By adding
 - **Selector**: `.archive-body`
 - **Transition**: Replace sudden `display: none` toggle with a CSS transition on `max-height`, `opacity`, and `padding`. Toggled smoothly via the `.open` class.
 
+### 4. Combo Streak Fire Effects (Scheme B)
+- **Concept**: Track rapid successive tab closures within 2.5 seconds.
+- **Visuals**: A floating badge (`.combo-badge`) slide-spawns at the bottom right.
+- **Tiers**:
+  * Tier 1 (2-4x): Subtle ink & paper badge with standard lightning icon.
+  * Tier 2 (5-9x): Golden-amber gradient fire badge (`🔥`).
+  * Tier 3 (10x+): Blazing rose gradient badge with firestorms (`🔥💥🔥`), subtle continuous shadow breathing, and milestone confetti blasts.
+
+### 5. Zen Mode Quotes & Breathing Empty State (Scheme C)
+- **Concept**: Turn the empty state into a relaxing moment of tranquility.
+- **Zen Quotes**: Randomly select from 7 cozy, encouraging quotes (e.g. *"Ah, digital peace and quiet. Time to make a warm cup of tea 🍵"*).
+- **Breathing Pulse**: `.empty-checkmark` has a slow, rhythmic 3-second breathing pulse scale transition on its soft sage outer glow.
+
+### 6. Sound Synthesizers Upgrade (Scheme A)
+- **Bubble Plop (`playSaveSound`)**: A rapidly rising sine frequency sweep from 300Hz to 1200Hz over 0.15s, making a perfect organic "plop/bubble" sound when saving a tab.
+- **Achievement Chime (`playChimeSound`)**: An arpeggiated major chord bell chime (C5, E5, G5, C6) with natural bell decay when checking off list items.
+
 ## Verification & Testing
 - Open a new tab in Chrome/Edge.
 - Hover over domain cards and click to verify springiness and click compression.
 - Hover over tab list items to verify sliding.
 - Close a tab and watch it slide left with sound/confetti.
-- Save a tab for later and watch it slide right into the checklist.
+- Save a tab for later: listen to the bubbly plop sound and watch it slide right into the checklist.
+- Check off a checklist item: listen to the harmonious arpeggiated major chime.
+- Close multiple tabs rapidly to watch the combo counter scale up and shift colors.
+- Clear all tabs to trigger the Zen Mode empty state, verifying the breathing glow and random comfort quotes.
 - Toggle the archive to verify accordion expansion.

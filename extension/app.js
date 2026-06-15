@@ -170,6 +170,7 @@ async function closeDuplicateTabs(urls, keepOne = true) {
 
   if (toClose.length > 0) await chrome.tabs.remove(toClose);
   await fetchOpenTabs();
+  return toClose.length;
 }
 
 /**
@@ -189,7 +190,7 @@ async function closeTabOutDupes() {
     t.url?.startsWith('edge://newtab')
   );
 
-  if (tabOutTabs.length <= 1) return;
+  if (tabOutTabs.length <= 1) return 0;
 
   // Keep the active Tab Out tab in the CURRENT window — that's the one the
   // user is looking at right now. Falls back to any active one, then the first.
@@ -200,6 +201,7 @@ async function closeTabOutDupes() {
   const toClose = tabOutTabs.filter(t => t.id !== keep.id).map(t => t.id);
   if (toClose.length > 0) await chrome.tabs.remove(toClose);
   await fetchOpenTabs();
+  return toClose.length;
 }
 
 
@@ -292,6 +294,155 @@ async function dismissSavedTab(id) {
 /* ----------------------------------------------------------------
    UI HELPERS
    ---------------------------------------------------------------- */
+
+/* ─── Combo Streak State & Logic ─────────────────────────────────────────── */
+let comboCount = 0;
+let comboTimeout = null;
+
+/**
+ * triggerCombo(tabsClosedCount)
+ *
+ * Tracks rapid successive tab closures and triggers a satisfying combo badge.
+ */
+function triggerCombo(tabsClosedCount) {
+  if (tabsClosedCount <= 0) return;
+  comboCount += tabsClosedCount;
+
+  if (comboTimeout) clearTimeout(comboTimeout);
+
+  if (comboCount >= 2) {
+    showComboBadge(comboCount);
+  }
+
+  comboTimeout = setTimeout(() => {
+    resetCombo();
+  }, 2500);
+}
+
+/**
+ * showComboBadge(count)
+ *
+ * Spawns and animates a physical combo streak badge in the bottom-right.
+ */
+function showComboBadge(count) {
+  let el = document.getElementById('comboBadge');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'comboBadge';
+    el.className = 'combo-badge';
+    document.body.appendChild(el);
+  }
+
+  el.className = 'combo-badge';
+  let flameIcon = '⚡️';
+  if (count >= 5 && count < 10) {
+    el.classList.add('tier-2');
+    flameIcon = '🔥';
+  } else if (count >= 10) {
+    el.classList.add('tier-3');
+    flameIcon = '🔥💥🔥';
+  } else {
+    el.classList.add('tier-1');
+  }
+
+  el.innerHTML = `<span class="combo-count">${count}x</span> Combo ${flameIcon}`;
+
+  // Reset animations and bump
+  el.classList.add('visible');
+  el.classList.remove('bump');
+  void el.offsetWidth; // force reflow
+  el.classList.add('bump');
+
+  // Milestone celebratory confetti from the corner!
+  if (count === 5 || count === 10 || count === 15 || count % 10 === 0) {
+    shootConfetti(window.innerWidth - 100, window.innerHeight - 100);
+  }
+}
+
+/**
+ * resetCombo()
+ *
+ * Smoothly hides the combo badge.
+ */
+function resetCombo() {
+  const el = document.getElementById('comboBadge');
+  if (el) {
+    el.classList.remove('visible');
+  }
+  comboCount = 0;
+}
+
+/* ─── Web Audio API Synths ───────────────────────────────────────────────── */
+
+/**
+ * playSaveSound()
+ *
+ * Synthesizes a cute, bubbly plop/droplet sound when tabs are saved for later.
+ */
+function playSaveSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(300, t);
+    // Rapid upward frequency sweep creates a perfect "plop/bubble" sound
+    osc.frequency.exponentialRampToValueAtTime(1200, t + 0.12);
+
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.12, t + 0.02); // quick attack
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15); // decay
+
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.18);
+
+    setTimeout(() => ctx.close(), 400);
+  } catch {
+    // Fail silently
+  }
+}
+
+/**
+ * playChimeSound()
+ *
+ * Synthesizes an arpeggiated major chord bell chime when completing a checklist item.
+ */
+function playChimeSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+
+    const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+    const duration = 0.8;
+
+    freqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+
+      // Strummed note delay
+      const noteDelay = idx * 0.03;
+
+      gain.gain.setValueAtTime(0.001, t + noteDelay);
+      gain.gain.linearRampToValueAtTime(0.05, t + noteDelay + 0.03); // gentle attack
+      gain.gain.exponentialRampToValueAtTime(0.001, t + noteDelay + duration);
+
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t + noteDelay);
+      osc.stop(t + noteDelay + duration + 0.1);
+    });
+
+    setTimeout(() => ctx.close(), 1200);
+  } catch {
+    // Fail silently
+  }
+}
 
 /**
  * playCloseSound()
@@ -459,6 +610,17 @@ function checkAndShowEmptyState() {
   const remaining = missionsEl.querySelectorAll('.mission-card:not(.closing)').length;
   if (remaining > 0) return;
 
+  const zenQuotes = [
+    { title: "Today is a clean slate.", subtitle: "Take a deep breath and start fresh." },
+    { title: "Inbox zero, but for tabs.", subtitle: "Your digital desk is completely clear." },
+    { title: "Living in the moment.", subtitle: "No open loops, no background noise." },
+    { title: "Ah, digital peace and quiet.", subtitle: "Time to make a warm cup of tea 🍵" },
+    { title: "All clear. You did it.", subtitle: "Go ahead, close your browser and enjoy the day." },
+    { title: "The workspace is clear.", subtitle: "Your focus is yours again." },
+    { title: "Zero tabs, infinite potential.", subtitle: "What are you going to build next?" }
+  ];
+  const randomZen = zenQuotes[Math.floor(Math.random() * zenQuotes.length)];
+
   missionsEl.innerHTML = `
     <div class="missions-empty-state">
       <div class="empty-checkmark">
@@ -466,8 +628,8 @@ function checkAndShowEmptyState() {
           <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
         </svg>
       </div>
-      <div class="empty-title">Inbox zero, but for tabs.</div>
-      <div class="empty-subtitle">You're free.</div>
+      <div class="empty-title">${randomZen.title}</div>
+      <div class="empty-subtitle">${randomZen.subtitle}</div>
     </div>
   `;
 
@@ -1195,8 +1357,9 @@ document.addEventListener('click', async (e) => {
 
   // ---- Close duplicate Tab Out tabs ----
   if (action === 'close-tabout-dupes') {
-    await closeTabOutDupes();
+    const closedCount = await closeTabOutDupes();
     playCloseSound();
+    triggerCombo(closedCount);
     const banner = document.getElementById('tabOutDupeBanner');
     if (banner) {
       banner.style.transition = 'opacity 0.4s';
@@ -1239,6 +1402,7 @@ document.addEventListener('click', async (e) => {
     await fetchOpenTabs();
 
     playCloseSound();
+    triggerCombo(1);
 
     // Animate the chip row out (slides left to discard)
     const chip = actionEl.closest('.page-chip');
@@ -1279,6 +1443,7 @@ document.addEventListener('click', async (e) => {
     // Save to chrome.storage.local
     try {
       await saveTabForLater({ url: tabUrl, title: tabTitle });
+      playSaveSound();
     } catch (err) {
       console.error('[tab-out] Failed to save tab:', err);
       showToast('Failed to save tab');
@@ -1311,6 +1476,7 @@ document.addEventListener('click', async (e) => {
     if (!id) return;
 
     await checkOffSavedTab(id);
+    playChimeSound();
 
     // Animate: strikethrough first, then slide out
     const item = actionEl.closest('.deferred-item');
@@ -1367,6 +1533,7 @@ document.addEventListener('click', async (e) => {
     if (card) {
       playCloseSound();
       animateCardOut(card);
+      triggerCombo(group.tabs.length);
     }
 
     // Remove from in-memory groups
@@ -1387,8 +1554,9 @@ document.addEventListener('click', async (e) => {
     const urls = urlsEncoded.split(',').map(u => decodeURIComponent(u)).filter(Boolean);
     if (urls.length === 0) return;
 
-    await closeDuplicateTabs(urls, true);
+    const closedCount = await closeDuplicateTabs(urls, true);
     playCloseSound();
+    triggerCombo(closedCount);
 
     // Hide the dedup button
     actionEl.style.transition = 'opacity 0.2s';
@@ -1424,6 +1592,7 @@ document.addEventListener('click', async (e) => {
       .map(t => t.url);
     await closeTabsByUrls(allUrls);
     playCloseSound();
+    triggerCombo(allUrls.length);
 
     document.querySelectorAll('#openTabsMissions .mission-card').forEach(c => {
       shootConfetti(
