@@ -12,7 +12,13 @@ Originally based on the open-source Tab Out project by Zara Zhang and adapted he
 
 ## Install with a coding agent
 
-Open the extension folder in your coding agent and say **"install this"**. It only takes a minute.
+Send your coding agent (Claude Code, Codex, etc.) this repo and say **"install this"**:
+
+```
+https://github.com/washi4/tab-out
+```
+
+The agent will walk you through it. Takes about 1 minute.
 
 ---
 
