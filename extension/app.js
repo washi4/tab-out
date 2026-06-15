@@ -374,6 +374,42 @@ function resetCombo() {
 
 /* ─── Web Audio API Synths ───────────────────────────────────────────────── */
 
+let audioCtx = null;
+
+/**
+ * initAudioContext()
+ *
+ * Warm up the shared AudioContext synchronously inside the user's click gesture.
+ * Crucial for avoiding the browser's autoplay policy blocking sound after await commands.
+ */
+function initAudioContext() {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+  } catch (err) {
+    console.warn('[tab-out] AudioContext init failed:', err);
+  }
+}
+
+/**
+ * getAudioContext()
+ *
+ * Accessor for the shared robust AudioContext.
+ */
+function getAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
+}
+
 /**
  * playSaveSound()
  *
@@ -381,7 +417,7 @@ function resetCombo() {
  */
 function playSaveSound() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getAudioContext();
     const t = ctx.currentTime;
 
     const osc = ctx.createOscillator();
@@ -399,10 +435,8 @@ function playSaveSound() {
     osc.connect(gain).connect(ctx.destination);
     osc.start(t);
     osc.stop(t + 0.18);
-
-    setTimeout(() => ctx.close(), 400);
-  } catch {
-    // Fail silently
+  } catch (err) {
+    console.error('[tab-out] playSaveSound error:', err);
   }
 }
 
@@ -413,7 +447,7 @@ function playSaveSound() {
  */
 function playChimeSound() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getAudioContext();
     const t = ctx.currentTime;
 
     const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
@@ -437,10 +471,8 @@ function playChimeSound() {
       osc.start(t + noteDelay);
       osc.stop(t + noteDelay + duration + 0.1);
     });
-
-    setTimeout(() => ctx.close(), 1200);
-  } catch {
-    // Fail silently
+  } catch (err) {
+    console.error('[tab-out] playChimeSound error:', err);
   }
 }
 
@@ -453,7 +485,7 @@ function playChimeSound() {
  */
 function playCloseSound() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getAudioContext();
     const t = ctx.currentTime;
 
     // Swoosh: shaped white noise through a sweeping bandpass filter
@@ -486,10 +518,8 @@ function playCloseSound() {
 
     source.connect(filter).connect(gain).connect(ctx.destination);
     source.start(t);
-
-    setTimeout(() => ctx.close(), 500);
-  } catch {
-    // Audio not supported — fail silently
+  } catch (err) {
+    console.error('[tab-out] playCloseSound error:', err);
   }
 }
 
@@ -1349,6 +1379,11 @@ async function renderDashboard() {
    ---------------------------------------------------------------- */
 
 document.addEventListener('click', async (e) => {
+  // Synchronously warm up the shared AudioContext within the user's click gesture.
+  // This is crucial because browser security policies block AudioContext from starting
+  // after asynchronous tasks (like 'await' commands).
+  initAudioContext();
+
   // Walk up the DOM to find the nearest element with data-action
   const actionEl = e.target.closest('[data-action]');
   if (!actionEl) return;
