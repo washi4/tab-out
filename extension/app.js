@@ -26,6 +26,26 @@
 // All open tabs — populated by fetchOpenTabs()
 let openTabs = [];
 
+// Track tab IDs that we close programmatically so onRemoved doesn't trigger full render and disrupt animations
+const programmaticallyClosedTabIds = new Set();
+
+/**
+ * removeTabsSafely(ids)
+ *
+ * Removes one or more tabs and flags them as programmatically closed
+ * to prevent onRemoved event from disrupting tab exit animations.
+ */
+async function removeTabsSafely(ids) {
+  const idsArray = Array.isArray(ids) ? ids : [ids];
+  idsArray.forEach(id => programmaticallyClosedTabIds.add(id));
+  try {
+    await chrome.tabs.remove(ids);
+  } catch (err) {
+    console.warn('[tab-out] Could not remove tab:', err);
+    idsArray.forEach(id => programmaticallyClosedTabIds.delete(id));
+  }
+}
+
 /**
  * fetchOpenTabs()
  *
@@ -93,7 +113,7 @@ async function closeTabsByUrls(urls) {
     })
     .map(tab => tab.id);
 
-  if (toClose.length > 0) await chrome.tabs.remove(toClose);
+  if (toClose.length > 0) await removeTabsSafely(toClose);
   await fetchOpenTabs();
 }
 
@@ -108,7 +128,7 @@ async function closeTabsExact(urls) {
   const urlSet = new Set(urls);
   const allTabs = await chrome.tabs.query({});
   const toClose = allTabs.filter(t => urlSet.has(t.url)).map(t => t.id);
-  if (toClose.length > 0) await chrome.tabs.remove(toClose);
+  if (toClose.length > 0) await removeTabsSafely(toClose);
   await fetchOpenTabs();
 }
 
@@ -168,7 +188,7 @@ async function closeDuplicateTabs(urls, keepOne = true) {
     }
   }
 
-  if (toClose.length > 0) await chrome.tabs.remove(toClose);
+  if (toClose.length > 0) await removeTabsSafely(toClose);
   await fetchOpenTabs();
   return toClose.length;
 }
@@ -199,7 +219,7 @@ async function closeTabOutDupes() {
     tabOutTabs.find(t => t.active) ||
     tabOutTabs[0];
   const toClose = tabOutTabs.filter(t => t.id !== keep.id).map(t => t.id);
-  if (toClose.length > 0) await chrome.tabs.remove(toClose);
+  if (toClose.length > 0) await removeTabsSafely(toClose);
   await fetchOpenTabs();
   return toClose.length;
 }
@@ -234,14 +254,26 @@ async function closeTabOutDupes() {
  */
 async function saveTabForLater(tab) {
   const { deferred = [] } = await chrome.storage.local.get('deferred');
-  deferred.push({
-    id:        Date.now().toString(),
-    url:       tab.url,
-    title:     tab.title,
-    savedAt:   new Date().toISOString(),
-    completed: false,
-    dismissed: false,
-  });
+  
+  // Check if there is already an active (not completed, not dismissed) item with the same URL
+  const existingActive = deferred.find(item => item.url === tab.url && !item.completed && !item.dismissed);
+  
+  if (existingActive) {
+    // Prevent duplicate: update title and reset saved timestamp to now
+    existingActive.title = tab.title;
+    existingActive.savedAt = new Date().toISOString();
+  } else {
+    // Add new item
+    deferred.push({
+      id:        Date.now().toString(),
+      url:       tab.url,
+      title:     tab.title,
+      savedAt:   new Date().toISOString(),
+      completed: false,
+      dismissed: false,
+    });
+  }
+  
   await chrome.storage.local.set({ deferred });
 }
 
@@ -1441,7 +1473,7 @@ document.addEventListener('click', async (e) => {
     // Close the tab in Chrome directly
     const allTabs = await chrome.tabs.query({});
     const match   = allTabs.find(t => t.url === tabUrl);
-    if (match) await chrome.tabs.remove(match.id);
+    if (match) await removeTabsSafely(match.id);
     await fetchOpenTabs();
 
     playCloseSound();
@@ -1496,7 +1528,7 @@ document.addEventListener('click', async (e) => {
     // Close the tab in Chrome
     const allTabs = await chrome.tabs.query({});
     const match   = allTabs.find(t => t.url === tabUrl);
-    if (match) await chrome.tabs.remove(match.id);
+    if (match) await removeTabsSafely(match.id);
     await fetchOpenTabs();
 
     // Animate chip out (slides right towards Saved for Later sidebar)
@@ -1869,6 +1901,29 @@ document.addEventListener('error', (e) => {
     e.target.style.display = 'none';
   }
 }, true); // Use capturing phase because 'error' event does not bubble!
+
+
+// ---- Auto-update dashboard in real-time when browser tabs change ----
+chrome.tabs.onCreated.addListener(() => {
+  renderStaticDashboard();
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  // Only re-render if URL, title, or loading status changed to avoid redundant layout repaints
+  if (changeInfo.url || changeInfo.title || changeInfo.status === 'complete') {
+    renderStaticDashboard();
+  }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  // If the tab was closed programmatically from our UI, let the UI animation handle it
+  // and do not trigger a full re-render that would disrupt the active animation.
+  if (programmaticallyClosedTabIds.has(tabId)) {
+    programmaticallyClosedTabIds.delete(tabId);
+    return;
+  }
+  renderStaticDashboard();
+});
 
 
 /* ----------------------------------------------------------------
