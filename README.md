@@ -36,7 +36,7 @@ Open the extension folder in your coding agent and say **"install this"**. It on
 **1. Clone the repo**
 
 ```bash
-git clone <your-fork-or-copy-url>
+git clone https://github.com/washi4/tab-out.git
 ```
 
 **2. Load the extension in Chrome or Edge**
