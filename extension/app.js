@@ -2273,9 +2273,12 @@ async function restoreSession() {
   // Play combo/restore sound
   playChimeSound();
 
-  // Create new tabs in the background
-  for (const url of last_session_backup) {
-    chrome.tabs.create({ url, active: false });
+  // Create new tabs in the background in parallel and wait for all of them to be registered,
+  // preventing a race condition where fetchOpenTabs runs before the tabs are created in Chrome.
+  try {
+    await Promise.all(last_session_backup.map(url => chrome.tabs.create({ url, active: false })));
+  } catch (err) {
+    console.error('[tab-out] Failed to restore some tabs:', err);
   }
 
   // Update check-list: complete/archive those URLs
