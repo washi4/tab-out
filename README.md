@@ -6,6 +6,8 @@ Tab Out is a Chromium extension that replaces your new tab page with a dashboard
 
 No server. No account. No external API calls. Just a browser extension that works in Chrome and Edge.
 
+![Tab Out Screenshot](./tapout.png)
+
 Originally based on the open-source Tab Out project by Zara Zhang and adapted here as a personal customized build under the MIT License.
 
 ---
