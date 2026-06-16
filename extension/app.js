@@ -261,6 +261,7 @@ async function saveTabForLater(tab) {
   if (existingActive) {
     // Prevent duplicate: update title and reset saved timestamp to now
     existingActive.title = tab.title;
+    existingActive.favIconUrl = tab.favIconUrl || '';
     existingActive.savedAt = new Date().toISOString();
   } else {
     // Add new item
@@ -268,6 +269,7 @@ async function saveTabForLater(tab) {
       id:        Date.now().toString(),
       url:       tab.url,
       title:     tab.title,
+      favIconUrl: tab.favIconUrl || '',
       savedAt:   new Date().toISOString(),
       completed: false,
       dismissed: false,
@@ -996,7 +998,7 @@ function buildOverflowChips(hiddenTabs, urlCounts = {}) {
     const safeTitle = label.replace(/"/g, '&quot;');
     let domain = '';
     try { domain = new URL(tab.url).hostname; } catch {}
-    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
+    const faviconUrl = tab.favIconUrl || (domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '');
     const searchText = `${label} ${tab.url}`.toLowerCase().replace(/"/g, '&quot;');
     return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" data-search-text="${searchText}" title="${safeTitle}">
       ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="">` : ''}
@@ -1078,7 +1080,7 @@ function renderDomainCard(group) {
     const safeTitle = label.replace(/"/g, '&quot;');
     let domain = '';
     try { domain = new URL(tab.url).hostname; } catch {}
-    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
+    const faviconUrl = tab.favIconUrl || (domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '');
     const searchText = `${label} ${tab.url}`.toLowerCase().replace(/"/g, '&quot;');
     return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" data-search-text="${searchText}" title="${safeTitle}">
       ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="">` : ''}
@@ -1197,7 +1199,7 @@ async function renderDeferredColumn() {
 function renderDeferredItem(item) {
   let domain = '';
   try { domain = new URL(item.url).hostname.replace(/^www\./, ''); } catch {}
-  const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
+  const faviconUrl = item.favIconUrl || (domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '');
   const ago = timeAgo(item.savedAt);
 
   return `
@@ -1517,7 +1519,13 @@ document.addEventListener('click', async (e) => {
 
     // Save to chrome.storage.local
     try {
-      await saveTabForLater({ url: tabUrl, title: tabTitle });
+      const allTabs = await chrome.tabs.query({});
+      const match   = allTabs.find(t => t.url === tabUrl);
+      await saveTabForLater({
+        url: tabUrl,
+        title: tabTitle,
+        favIconUrl: match ? match.favIconUrl : ''
+      });
       playSaveSound();
     } catch (err) {
       console.error('[tab-out] Failed to save tab:', err);
@@ -1912,7 +1920,7 @@ function updateSearchDropdown(query) {
   const itemsHtml = displayMatches.map((tab, idx) => {
     let domain = '';
     try { domain = new URL(tab.url).hostname.replace(/^www\./, ''); } catch {}
-    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
+    const faviconUrl = tab.favIconUrl || (domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '');
     const activeClass = idx === 0 ? ' active' : '';
 
     // Highlight matches in title and URL
