@@ -2330,4 +2330,109 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   padding-top: 16px;
 }
 
+/* ============================================================
+   CYBERPUNK MATRIX / GLOWING NEON BLUE THEME OVERRIDES
+   ============================================================ */
+:root.theme-cyberpunk {
+  --ink: #e0e6ed;             /* Crisp Ice Silver text */
+  --paper: #060913;           /* Ultra-deep obsidian virtual dark */
+  --warm-gray: #151c2a;       /* Matte dark graphite for borders */
+  --muted: #6b7a90;           /* Tactical steel blue-gray */
+  --accent-amber: #ff007f;    /* Glowing Neon Magenta/Pink */
+  --accent-sage: #00f0ff;     /* Glowing Cyber Laser Cyan */
+  --accent-slate: #8b5cf6;    /* Glowing Tech Purple */
+  --accent-rose: #ff3366;     /* Electric Pink-Red */
+  --status-active: #39ff14;   /* Acid UFO Green */
+  --status-cooling: #ffd700;  /* Cyberpunk Gold */
+  --status-abandoned: #ff3366;/* Electric Pink-Red */
+  --card-bg: #0d1321;         /* Sleek carbon deck dark card background */
+  --shadow: rgba(0, 240, 255, 0.15); /* Laser cyan glowing shadow */
+}
+
+/* 1. Cyber background with high-tech laser grid + noise analogue grain */
+.theme-cyberpunk body::before {
+  background-image: 
+    linear-gradient(rgba(0, 240, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.015) 1px, transparent 1px),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+  background-size: 32px 32px, 32px 32px, auto;
+}
+
+/* 2. Overriding hardcoded colors for buttons and search focus */
+.theme-cyberpunk .tactile-btn {
+  box-shadow: 0 4px 12px rgba(255, 0, 127, 0.2);
+  border-color: rgba(255, 0, 127, 0.3);
+}
+.theme-cyberpunk .tactile-btn:hover {
+  background: #e60072;
+  box-shadow: 0 8px 24px rgba(255, 0, 127, 0.4);
+}
+.theme-cyberpunk .tactile-btn:active {
+  box-shadow: 0 2px 6px rgba(255, 0, 127, 0.2);
+}
+
+/* Custom styles for workspace secondary buttons in cyberpunk */
+.theme-cyberpunk #btnSaveWorkspace {
+  background: rgba(0, 240, 255, 0.08) !important;
+  border-color: rgba(0, 240, 255, 0.2) !important;
+  color: var(--accent-sage) !important;
+}
+.theme-cyberpunk #btnSaveWorkspace:hover {
+  background: rgba(0, 240, 255, 0.16) !important;
+  border-color: var(--accent-sage) !important;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3) !important;
+}
+
+.theme-cyberpunk .tactile-btn.secondary {
+  border-color: var(--accent-sage);
+}
+.theme-cyberpunk .tactile-btn.secondary:hover {
+  background: rgba(0, 240, 255, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 240, 255, 0.2);
+}
+
+/* Search bar focus in cyberpunk (uses neon blue/cyan) */
+.theme-cyberpunk .search-input-wrapper:focus-within {
+  border-color: var(--accent-sage);
+  box-shadow: 0 8px 20px rgba(0, 240, 255, 0.2), 0 0 0 4px rgba(0, 240, 255, 0.12);
+}
+
+/* 3. Cyberpunk neon glow on cards when hovered */
+.theme-cyberpunk .mission-card:hover {
+  border-color: var(--accent-sage);
+  box-shadow: 0 8px 24px rgba(0, 240, 255, 0.2);
+}
+
+/* 4. Scrollbar customization for cyberpunk mode */
+.theme-cyberpunk ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.theme-cyberpunk ::-webkit-scrollbar-track {
+  background: var(--paper);
+}
+.theme-cyberpunk ::-webkit-scrollbar-thumb {
+  background: var(--warm-gray);
+  border-radius: 4px;
+  border: 2px solid var(--paper);
+}
+.theme-cyberpunk ::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-sage);
+  box-shadow: 0 0 8px var(--accent-sage);
+}
+
+/* 5. Custom cyberpunk selection color */
+.theme-cyberpunk ::selection {
+  background: rgba(0, 240, 255, 0.3);
+  color: #ffffff;
+}
+
+/* 6. Rotate icon transition */
+#btnThemeToggle svg {
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#btnThemeToggle:hover svg {
+  transform: rotate(45deg) scale(1.1);
+}
+
 

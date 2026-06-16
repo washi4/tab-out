@@ -616,14 +616,112 @@ function playCloseSound() {
 }
 
 /**
+ * playSageThemeSound()
+ *
+ * Plays a warm, organic acoustic chime when switching to the Sage Green theme.
+ * Built entirely with the Web Audio API.
+ */
+function playSageThemeSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+
+    const notes = [220.00, 277.18, 329.63, 440.00]; // A3, C#4, E4, A4 (A Major)
+    const duration = 0.8;
+
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+
+      const delay = idx * 0.08; // slow arpeggio/strum
+
+      gain.gain.setValueAtTime(0.001, t + delay);
+      gain.gain.linearRampToValueAtTime(0.06, t + delay + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + delay + duration);
+
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t + delay);
+      osc.stop(t + delay + duration + 0.1);
+    });
+  } catch (err) {
+    console.error('[tab-out] playSageThemeSound error:', err);
+  }
+}
+
+/**
+ * playCyberThemeSound()
+ *
+ * Plays a high-tech digital sweep with low-to-high riser pitch-bend and high resonance.
+ * Built entirely with the Web Audio API.
+ */
+function playCyberThemeSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+
+    // 1. Digital Synth Sweep
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(100, t);
+    osc.frequency.exponentialRampToValueAtTime(600, t + 0.35);
+
+    filter.type = 'lowpass';
+    filter.Q.value = 5.0; // resonant
+    filter.frequency.setValueAtTime(300, t);
+    filter.frequency.exponentialRampToValueAtTime(3500, t + 0.35);
+
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.07, t + 0.05); // fast attack
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4); // fade out
+
+    osc.connect(filter).connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.45);
+
+    // 2. High digital beep on complete
+    const beep = ctx.createOscillator();
+    const beepGain = ctx.createGain();
+
+    beep.type = 'sine';
+    beep.frequency.setValueAtTime(1760, t + 0.25); // A6
+
+    beepGain.gain.setValueAtTime(0.001, t + 0.25);
+    beepGain.gain.linearRampToValueAtTime(0.04, t + 0.28);
+    beepGain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+
+    beep.connect(beepGain).connect(ctx.destination);
+    beep.start(t + 0.25);
+    beep.stop(t + 0.55);
+  } catch (err) {
+    console.error('[tab-out] playCyberThemeSound error:', err);
+  }
+}
+
+/**
  * shootConfetti(x, y)
  *
  * Shoots a burst of colorful confetti particles from the given screen
  * coordinates (typically the center of a card being closed).
  * Pure CSS + JS, no libraries.
+ * Adapts colors dynamically to the active theme!
  */
 function shootConfetti(x, y) {
-  const colors = [
+  const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+  const colors = isCyber ? [
+    '#00f0ff', // cyan
+    '#05f9ff', // light cyan
+    '#ff007f', // magenta
+    '#ff5ebd', // light pink
+    '#8b5cf6', // purple
+    '#a78bfa', // light purple
+    '#39ff14', // neon green
+  ] : [
     '#c8713a', // amber
     '#e8a070', // amber light
     '#5a7a62', // sage
@@ -1536,6 +1634,30 @@ document.addEventListener('click', async (e) => {
   if (restoreBtn) {
     e.preventDefault();
     await restoreSession();
+    return;
+  }
+
+  const themeBtn = e.target.closest('#btnThemeToggle');
+  if (themeBtn) {
+    e.preventDefault();
+    const root = document.documentElement;
+    const isCyber = root.classList.contains('theme-cyberpunk');
+    const newTheme = isCyber ? 'sage-green' : 'cyberpunk-blue';
+
+    // Persist theme to storage
+    await chrome.storage.local.set({ theme: newTheme });
+    applyTheme(newTheme);
+
+    // Play satisfying theme audio feedback
+    if (newTheme === 'cyberpunk-blue') {
+      playCyberThemeSound();
+    } else {
+      playSageThemeSound();
+    }
+
+    // Shoot a gorgeous dynamic celebratory confetti burst from the toggle button!
+    const rect = themeBtn.getBoundingClientRect();
+    shootConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
     return;
   }
 
@@ -2975,9 +3097,66 @@ async function renderWorkspaces() {
   }).join('');
 }
 
+/**
+ * initThemeSystem()
+ *
+ * Loads the active theme from chrome.storage.local and applies it to the document element.
+ */
+async function initThemeSystem() {
+  try {
+    const { theme = 'sage-green' } = await chrome.storage.local.get('theme');
+    applyTheme(theme);
+  } catch (err) {
+    console.error('[tab-out] initThemeSystem error:', err);
+    applyTheme('sage-green'); // fallback
+  }
+}
+
+/**
+ * applyTheme(themeName)
+ *
+ * Appends or removes theme classes and updates button UI elements.
+ */
+function applyTheme(themeName) {
+  const root = document.documentElement;
+  const btnText = document.getElementById('themeToggleText');
+  
+  const iconMoon = document.querySelector('.theme-icon-moon');
+  const iconSun = document.querySelector('.theme-icon-sun');
+
+  if (themeName === 'cyberpunk-blue') {
+    root.classList.add('theme-cyberpunk');
+    if (btnText) btnText.textContent = 'Sage Paper';
+    if (iconMoon) iconMoon.style.display = 'none';
+    if (iconSun) iconSun.style.display = 'inline-block';
+    
+    // Also style Save Workspace button to match Cyberpunk Cyan
+    const btnSaveWorkspace = document.getElementById('btnSaveWorkspace');
+    if (btnSaveWorkspace) {
+      btnSaveWorkspace.style.background = 'rgba(0, 240, 255, 0.08)';
+      btnSaveWorkspace.style.borderColor = 'rgba(0, 240, 255, 0.15)';
+      btnSaveWorkspace.style.color = 'var(--accent-sage)';
+    }
+  } else {
+    root.classList.remove('theme-cyberpunk');
+    if (btnText) btnText.textContent = 'Cyber Deck';
+    if (iconMoon) iconMoon.style.display = 'inline-block';
+    if (iconSun) iconSun.style.display = 'none';
+    
+    // Style Save Workspace button back to Sage Green
+    const btnSaveWorkspace = document.getElementById('btnSaveWorkspace');
+    if (btnSaveWorkspace) {
+      btnSaveWorkspace.style.background = 'rgba(90, 122, 98, 0.08)';
+      btnSaveWorkspace.style.borderColor = 'rgba(90, 122, 98, 0.15)';
+      btnSaveWorkspace.style.color = 'var(--accent-sage)';
+    }
+  }
+}
+
 
 /* ----------------------------------------------------------------
    INITIALIZE
    ---------------------------------------------------------------- */
+initThemeSystem();
 initTechCursor();
 renderDashboard();
