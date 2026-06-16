@@ -29,6 +29,9 @@ let openTabs = [];
 // Track tab IDs that we close programmatically so onRemoved doesn't trigger full render and disrupt animations
 const programmaticallyClosedTabIds = new Set();
 
+// Track expanded workspace IDs to preserve accordion fold states between static dashboard renders
+const expandedWorkspaceIds = new Set();
+
 /**
  * removeTabsSafely(ids)
  *
@@ -1662,6 +1665,57 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  // ---- Toggle named workspace fold ----
+  if (action === 'toggle-workspace-fold') {
+    e.stopPropagation();
+    // Support clicking both headers and lists via data-ws-id
+    const wsId = actionEl.dataset.wsId;
+    if (!wsId) return;
+
+    const arrow = document.querySelector(`.workspace-toggle-arrow[data-ws-id="${wsId}"]`);
+    const list = document.querySelector(`.workspace-preview-list[data-ws-id="${wsId}"]`);
+
+    if (expandedWorkspaceIds.has(wsId)) {
+      expandedWorkspaceIds.delete(wsId);
+      if (arrow) arrow.classList.remove('expanded');
+      if (list) list.classList.remove('expanded');
+    } else {
+      expandedWorkspaceIds.add(wsId);
+      if (arrow) arrow.classList.add('expanded');
+      if (list) list.classList.add('expanded');
+    }
+    return;
+  }
+
+  // ---- Restore single tab from workspace ----
+  if (action === 'restore-single-ws-tab') {
+    e.stopPropagation();
+    const url = actionEl.dataset.url;
+    if (!url) return;
+
+    playChimeSound();
+    const currentlyOpenUrls = new Set(openTabs.map(t => t.url));
+    if (currentlyOpenUrls.has(url)) {
+      showToast('This tab is already open!');
+      // Find the tab and focus it
+      const openTab = openTabs.find(t => t.url === url);
+      if (openTab) {
+        chrome.tabs.update(openTab.id, { active: true });
+        chrome.windows.update(openTab.windowId, { focused: true });
+      }
+    } else {
+      try {
+        await chrome.tabs.create({ url, active: false });
+        showToast('Opened tab in background');
+        await fetchOpenTabs();
+        await renderStaticDashboard();
+      } catch (err) {
+        console.error('[tab-out] Failed to open workspace tab:', err);
+      }
+    }
+    return;
+  }
+
   // ---- Restore a named workspace ----
   if (action === 'restore-workspace') {
     e.stopPropagation();
@@ -2799,28 +2853,40 @@ async function handleWorkspaceSave() {
     return;
   }
 
-  const urls = Array.from(checkedBoxes).map(cb => cb.dataset.url);
-  await saveWorkspace(name, urls);
+  const selectedTabs = Array.from(checkedBoxes).map(cb => {
+    // Attempt to locate matching tab in current openTabs to capture its correct title and favicon
+    const tabId = parseInt(cb.dataset.tabId, 10);
+    const matchingTab = openTabs.find(t => t.id === tabId);
+    return {
+      title: matchingTab ? matchingTab.title : cb.dataset.url,
+      url: cb.dataset.url,
+      favIconUrl: matchingTab ? matchingTab.favIconUrl : ''
+    };
+  });
+
+  await saveWorkspace(name, selectedTabs);
   closeWorkspaceModal();
 }
 
 /**
- * saveWorkspace(name, urls)
+ * saveWorkspace(name, selectedTabs)
  *
- * Saves selected tab URLs as a named workspace in local storage.
+ * Saves selected tabs (with title, url, favicon) as a named workspace in local storage.
  */
-async function saveWorkspace(name, urls) {
-  if (!urls || urls.length === 0) {
+async function saveWorkspace(name, selectedTabs) {
+  if (!selectedTabs || selectedTabs.length === 0) {
     showToast('No tabs selected to save!');
     return;
   }
 
   const { workspaces = [] } = await chrome.storage.local.get('workspaces');
 
+  // Schema: id, name, createdAt, tabs: [{title, url, favIconUrl}], urls (for backwards compatibility)
   const newWorkspace = {
     id: 'ws-' + Date.now(),
     name: name,
-    urls: urls,
+    tabs: selectedTabs,
+    urls: selectedTabs.map(t => t.url), // maintain old flat array for fully backward-compatible loading
     createdAt: Date.now()
   };
 
@@ -2828,7 +2894,7 @@ async function saveWorkspace(name, urls) {
   await chrome.storage.local.set({ workspaces });
 
   playSaveSound();
-  showToast(`Saved workspace "${name}" with ${urls.length} tab${urls.length !== 1 ? 's' : ''}! 📁`);
+  showToast(`Saved workspace "${name}" with ${selectedTabs.length} tab${selectedTabs.length !== 1 ? 's' : ''}! 📁`);
   await renderStaticDashboard();
 }
 
@@ -2854,19 +2920,55 @@ async function renderWorkspaces() {
 
   if (workspacesEmpty) workspacesEmpty.style.display = 'none';
   workspacesContainer.innerHTML = workspaces.map(ws => {
-    return `
-      <div class="workspace-item clickable" data-ws-id="${ws.id}">
-        <div class="workspace-info" data-action="restore-workspace" data-ws-id="${ws.id}">
-          <span class="workspace-name">${escapeHtml(ws.name)}</span>
-          <span class="workspace-meta">${ws.urls.length} tabs &nbsp;&middot;&nbsp; ${new Date(ws.createdAt).toLocaleDateString()}</span>
+    const isExpanded = expandedWorkspaceIds.has(ws.id);
+    const arrowClass = isExpanded ? 'workspace-toggle-arrow expanded' : 'workspace-toggle-arrow';
+    const listClass = isExpanded ? 'workspace-preview-list expanded' : 'workspace-preview-list';
+
+    // Backwards-compatible fallback mapping for workspaces created before rich tab schema metadata
+    const tabList = ws.tabs || (ws.urls || []).map(url => {
+      let label = url;
+      try {
+        const parsed = new URL(url);
+        label = parsed.hostname.replace(/^www\./, '') + parsed.pathname;
+        if (label.length > 35) label = label.substring(0, 35) + '...';
+      } catch {}
+      return { title: label, url: url, favIconUrl: '' };
+    });
+
+    const previewItemsHtml = tabList.map(tab => {
+      const displayTitle = escapeHtml(tab.title || tab.url);
+      const displayFavicon = tab.favIconUrl || 'icons/icon16.png';
+      return `
+        <div class="workspace-preview-item" data-action="restore-single-ws-tab" data-url="${escapeHtml(tab.url)}" title="Click to open this specific tab: ${displayTitle}">
+          <img class="workspace-preview-favicon" src="${displayFavicon}" onerror="this.src='icons/icon16.png';">
+          <span class="workspace-preview-title">${displayTitle}</span>
         </div>
-        <div class="workspace-actions">
-          <button class="ws-action ws-restore" data-action="restore-workspace" data-ws-id="${ws.id}" title="Restore Workspace">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
-          </button>
-          <button class="ws-action ws-delete" data-action="delete-workspace" data-ws-id="${ws.id}" title="Delete Workspace">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.34 9m-4.78 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.108 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
-          </button>
+      `;
+    }).join('');
+
+    return `
+      <div class="workspace-wrapper">
+        <div class="workspace-item clickable" data-action="toggle-workspace-fold" data-ws-id="${ws.id}">
+          <div class="workspace-header-left">
+            <svg class="${arrowClass}" data-ws-id="${ws.id}" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+            <div class="workspace-info">
+              <span class="workspace-name">${escapeHtml(ws.name)}</span>
+              <span class="workspace-meta">${tabList.length} tabs &nbsp;&middot;&nbsp; ${new Date(ws.createdAt).toLocaleDateString()}</span>
+            </div>
+          </div>
+          <div class="workspace-actions">
+            <button class="ws-action ws-restore" data-action="restore-workspace" data-ws-id="${ws.id}" title="Restore Workspace">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
+            </button>
+            <button class="ws-action ws-delete" data-action="delete-workspace" data-ws-id="${ws.id}" title="Delete Workspace">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.34 9m-4.78 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.108 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+            </button>
+          </div>
+        </div>
+        <div class="workspace-preview-list" data-ws-id="${ws.id}">
+          ${previewItemsHtml}
         </div>
       </div>
     `;

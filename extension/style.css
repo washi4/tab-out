@@ -1892,6 +1892,112 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   box-shadow: 0 4px 12px var(--shadow);
 }
 
+/* ============================================================
+   WORKSPACE ACCORDION PREVIEW STYLES
+   ============================================================ */
+.workspace-wrapper {
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border: 1px solid var(--warm-gray);
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  overflow: hidden;
+}
+
+.workspace-wrapper:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-sage);
+  box-shadow: 0 4px 12px var(--shadow);
+}
+
+.workspace-wrapper .workspace-item {
+  border: none;
+  border-radius: 0;
+}
+
+.workspace-wrapper .workspace-item:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.workspace-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-toggle-arrow {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.workspace-toggle-arrow.expanded {
+  transform: rotate(90deg);
+  color: var(--accent-sage);
+}
+
+.workspace-preview-list {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  background: rgba(154, 145, 138, 0.02);
+  border-top: 1px dashed transparent;
+  transition: max-height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.25s ease, border-color 0.3s;
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-preview-list.expanded {
+  max-height: 300px;
+  overflow-y: auto;
+  opacity: 1;
+  padding: 8px 12px 12px 12px;
+  border-top-color: rgba(154, 145, 138, 0.12);
+}
+
+.workspace-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+  text-decoration: none;
+  color: var(--muted);
+}
+
+.workspace-preview-item:hover {
+  background: rgba(154, 145, 138, 0.06);
+  color: var(--ink);
+  transform: translateX(2px);
+}
+
+.workspace-preview-favicon {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.workspace-preview-title {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+
 .workspace-info {
   display: flex;
   flex-direction: column;
