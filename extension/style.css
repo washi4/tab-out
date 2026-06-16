@@ -2435,12 +2435,10 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   transform: rotate(45deg) scale(1.1);
 }
 
-/* Premium theme toggle circular icon button */
+/* Premium theme toggle squircle icon button */
 .theme-toggle-btn {
-  padding: 0 !important;
-  width: 36px;
-  height: 36px;
-  border-radius: 50% !important;
+  padding: 8px 12px !important; /* matches vertical padding of other buttons */
+  border-radius: 12px !important; /* same cohesive squircle radius as other buttons & search bar */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2449,11 +2447,13 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   border: 1px solid rgba(90, 107, 122, 0.15) !important;
   color: var(--accent-slate) !important;
   box-shadow: none !important;
+  height: auto !important; /* automatic robust height match */
+  width: auto !important;
 }
 
 .theme-toggle-btn svg {
-  width: 18px !important;
-  height: 18px !important;
+  width: 16px !important;
+  height: 16px !important;
 }
 
 .theme-toggle-btn:hover {
