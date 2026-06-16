@@ -2252,7 +2252,7 @@ async function saveCurrentSession() {
   await chrome.storage.local.set({ last_session_backup: urls });
 
   // Re-fetch and update UI to show the Restore Session button with count
-  await fetchOpenTabs();
+  await renderStaticDashboard();
   
   showToast(`Backed up session with ${urls.length} tab${urls.length !== 1 ? 's' : ''}! Safe to reboot at any time.`);
 }
@@ -2293,8 +2293,8 @@ async function restoreSession() {
   // Clear session backup
   await chrome.storage.local.set({ deferred, last_session_backup: [] });
 
-  // Re-fetch and update UI
-  await fetchOpenTabs();
+  // Re-fetch and update UI (this will also hide the Restore Session button)
+  await renderStaticDashboard();
 
   showToast(`Restored ${last_session_backup.length} tab${last_session_backup.length !== 1 ? 's' : ''}!`);
 }
