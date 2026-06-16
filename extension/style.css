@@ -1452,6 +1452,13 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
 }
 
 
+/* Fallback: Hide cursor elements by default (e.g., touch/mobile, or inactive) */
+.tech-cursor-dot,
+.tech-cursor-ring {
+  display: none;
+}
+
+
 /* ============================================================
    CYBERPUNK / HUD SCI-FI INTERACTIVE CURSOR
    ============================================================ */
@@ -1583,10 +1590,4 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
     from { transform: translate(-50%, -50%) rotate(0deg); }
     to { transform: translate(-50%, -50%) rotate(360deg); }
   }
-}
-
-/* Fallback: Hide cursor elements when custom cursor is inactive (e.g., touch/mobile) */
-.tech-cursor-dot,
-.tech-cursor-ring {
-  display: none;
 }
