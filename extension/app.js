@@ -26,6 +26,26 @@
 // All open tabs — populated by fetchOpenTabs()
 let openTabs = [];
 
+// Track tab IDs that we close programmatically so onRemoved doesn't trigger full render and disrupt animations
+const programmaticallyClosedTabIds = new Set();
+
+/**
+ * removeTabsSafely(ids)
+ *
+ * Removes one or more tabs and flags them as programmatically closed
+ * to prevent onRemoved event from disrupting tab exit animations.
+ */
+async function removeTabsSafely(ids) {
+  const idsArray = Array.isArray(ids) ? ids : [ids];
+  idsArray.forEach(id => programmaticallyClosedTabIds.add(id));
+  try {
+    await chrome.tabs.remove(ids);
+  } catch (err) {
+    console.warn('[tab-out] Could not remove tab:', err);
+    idsArray.forEach(id => programmaticallyClosedTabIds.delete(id));
+  }
+}
+
 /**
  * fetchOpenTabs()
  *
@@ -45,6 +65,7 @@ async function fetchOpenTabs() {
       title:    t.title,
       windowId: t.windowId,
       active:   t.active,
+      favIconUrl: t.favIconUrl,
       // Flag Tab Out's own pages so we can detect duplicate new tabs
       isTabOut:
         t.url === newtabUrl ||
@@ -93,7 +114,7 @@ async function closeTabsByUrls(urls) {
     })
     .map(tab => tab.id);
 
-  if (toClose.length > 0) await chrome.tabs.remove(toClose);
+  if (toClose.length > 0) await removeTabsSafely(toClose);
   await fetchOpenTabs();
 }
 
@@ -108,7 +129,7 @@ async function closeTabsExact(urls) {
   const urlSet = new Set(urls);
   const allTabs = await chrome.tabs.query({});
   const toClose = allTabs.filter(t => urlSet.has(t.url)).map(t => t.id);
-  if (toClose.length > 0) await chrome.tabs.remove(toClose);
+  if (toClose.length > 0) await removeTabsSafely(toClose);
   await fetchOpenTabs();
 }
 
@@ -168,8 +189,9 @@ async function closeDuplicateTabs(urls, keepOne = true) {
     }
   }
 
-  if (toClose.length > 0) await chrome.tabs.remove(toClose);
+  if (toClose.length > 0) await removeTabsSafely(toClose);
   await fetchOpenTabs();
+  return toClose.length;
 }
 
 /**
@@ -189,7 +211,7 @@ async function closeTabOutDupes() {
     t.url?.startsWith('edge://newtab')
   );
 
-  if (tabOutTabs.length <= 1) return;
+  if (tabOutTabs.length <= 1) return 0;
 
   // Keep the active Tab Out tab in the CURRENT window — that's the one the
   // user is looking at right now. Falls back to any active one, then the first.
@@ -198,8 +220,9 @@ async function closeTabOutDupes() {
     tabOutTabs.find(t => t.active) ||
     tabOutTabs[0];
   const toClose = tabOutTabs.filter(t => t.id !== keep.id).map(t => t.id);
-  if (toClose.length > 0) await chrome.tabs.remove(toClose);
+  if (toClose.length > 0) await removeTabsSafely(toClose);
   await fetchOpenTabs();
+  return toClose.length;
 }
 
 
@@ -225,22 +248,51 @@ async function closeTabOutDupes() {
    ---------------------------------------------------------------- */
 
 /**
+ * saveTabsForLater(tabs)
+ *
+ * Saves multiple tabs to the "Saved for Later" list in chrome.storage.local
+ * in a single atomic transaction to prevent write-loop race conditions and quota exhaustion.
+ * @param {Array<{ url: string, title: string, favIconUrl?: string }>} tabs
+ */
+async function saveTabsForLater(tabs) {
+  const { deferred = [] } = await chrome.storage.local.get('deferred');
+  const now = new Date().toISOString();
+
+  tabs.forEach((tab, index) => {
+    // Check if there is already an active (not completed, not dismissed) item with the same URL
+    const existingActive = deferred.find(item => item.url === tab.url && !item.completed && !item.dismissed);
+    
+    if (existingActive) {
+      // Prevent duplicate: update title and reset saved timestamp to now
+      existingActive.title = tab.title;
+      existingActive.favIconUrl = tab.favIconUrl || '';
+      existingActive.savedAt = now;
+    } else {
+      // Add new item with robust unique ID
+      const uniqueId = `${Date.now()}-${index}-${Math.floor(Math.random() * 1000)}`;
+      deferred.push({
+        id:         uniqueId,
+        url:        tab.url,
+        title:      tab.title,
+        favIconUrl: tab.favIconUrl || '',
+        savedAt:    now,
+        completed:  false,
+        dismissed:  false,
+      });
+    }
+  });
+
+  await chrome.storage.local.set({ deferred });
+}
+
+/**
  * saveTabForLater(tab)
  *
  * Saves a single tab to the "Saved for Later" list in chrome.storage.local.
- * @param {{ url: string, title: string }} tab
+ * @param {{ url: string, title: string, favIconUrl?: string }} tab
  */
 async function saveTabForLater(tab) {
-  const { deferred = [] } = await chrome.storage.local.get('deferred');
-  deferred.push({
-    id:        Date.now().toString(),
-    url:       tab.url,
-    title:     tab.title,
-    savedAt:   new Date().toISOString(),
-    completed: false,
-    dismissed: false,
-  });
-  await chrome.storage.local.set({ deferred });
+  await saveTabsForLater([tab]);
 }
 
 /**
@@ -293,6 +345,187 @@ async function dismissSavedTab(id) {
    UI HELPERS
    ---------------------------------------------------------------- */
 
+/* ─── Combo Streak State & Logic ─────────────────────────────────────────── */
+let comboCount = 0;
+let comboTimeout = null;
+
+/**
+ * triggerCombo(tabsClosedCount)
+ *
+ * Tracks rapid successive tab closures and triggers a satisfying combo badge.
+ */
+function triggerCombo(tabsClosedCount) {
+  if (tabsClosedCount <= 0) return;
+  comboCount += tabsClosedCount;
+
+  if (comboTimeout) clearTimeout(comboTimeout);
+
+  if (comboCount >= 2) {
+    showComboBadge(comboCount);
+  }
+
+  comboTimeout = setTimeout(() => {
+    resetCombo();
+  }, 2500);
+}
+
+/**
+ * showComboBadge(count)
+ *
+ * Spawns and animates a physical combo streak badge in the bottom-right.
+ */
+function showComboBadge(count) {
+  let el = document.getElementById('comboBadge');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'comboBadge';
+    el.className = 'combo-badge';
+    document.body.appendChild(el);
+  }
+
+  el.className = 'combo-badge';
+  let flameIcon = '⚡️';
+  if (count >= 5 && count < 10) {
+    el.classList.add('tier-2');
+    flameIcon = '🔥';
+  } else if (count >= 10) {
+    el.classList.add('tier-3');
+    flameIcon = '🔥💥🔥';
+  } else {
+    el.classList.add('tier-1');
+  }
+
+  el.innerHTML = `<span class="combo-count">${count}x</span> Combo ${flameIcon}`;
+
+  // Reset animations and bump
+  el.classList.add('visible');
+  el.classList.remove('bump');
+  void el.offsetWidth; // force reflow
+  el.classList.add('bump');
+
+  // Milestone celebratory confetti from the corner!
+  if (count === 5 || count === 10 || count === 15 || count % 10 === 0) {
+    shootConfetti(window.innerWidth - 100, window.innerHeight - 100);
+  }
+}
+
+/**
+ * resetCombo()
+ *
+ * Smoothly hides the combo badge.
+ */
+function resetCombo() {
+  const el = document.getElementById('comboBadge');
+  if (el) {
+    el.classList.remove('visible');
+  }
+  comboCount = 0;
+}
+
+/* ─── Web Audio API Synths ───────────────────────────────────────────────── */
+
+let audioCtx = null;
+
+/**
+ * initAudioContext()
+ *
+ * Warm up the shared AudioContext synchronously inside the user's click gesture.
+ * Crucial for avoiding the browser's autoplay policy blocking sound after await commands.
+ */
+function initAudioContext() {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+  } catch (err) {
+    console.warn('[tab-out] AudioContext init failed:', err);
+  }
+}
+
+/**
+ * getAudioContext()
+ *
+ * Accessor for the shared robust AudioContext.
+ */
+function getAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
+}
+
+/**
+ * playSaveSound()
+ *
+ * Synthesizes a cute, bubbly plop/droplet sound when tabs are saved for later.
+ */
+function playSaveSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(300, t);
+    // Rapid upward frequency sweep creates a perfect "plop/bubble" sound
+    osc.frequency.exponentialRampToValueAtTime(1200, t + 0.12);
+
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.12, t + 0.02); // quick attack
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15); // decay
+
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.18);
+  } catch (err) {
+    console.error('[tab-out] playSaveSound error:', err);
+  }
+}
+
+/**
+ * playChimeSound()
+ *
+ * Synthesizes an arpeggiated major chord bell chime when completing a checklist item.
+ */
+function playChimeSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+
+    const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+    const duration = 0.8;
+
+    freqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+
+      // Strummed note delay
+      const noteDelay = idx * 0.03;
+
+      gain.gain.setValueAtTime(0.001, t + noteDelay);
+      gain.gain.linearRampToValueAtTime(0.05, t + noteDelay + 0.03); // gentle attack
+      gain.gain.exponentialRampToValueAtTime(0.001, t + noteDelay + duration);
+
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t + noteDelay);
+      osc.stop(t + noteDelay + duration + 0.1);
+    });
+  } catch (err) {
+    console.error('[tab-out] playChimeSound error:', err);
+  }
+}
+
 /**
  * playCloseSound()
  *
@@ -302,7 +535,7 @@ async function dismissSavedTab(id) {
  */
 function playCloseSound() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getAudioContext();
     const t = ctx.currentTime;
 
     // Swoosh: shaped white noise through a sweeping bandpass filter
@@ -335,10 +568,8 @@ function playCloseSound() {
 
     source.connect(filter).connect(gain).connect(ctx.destination);
     source.start(t);
-
-    setTimeout(() => ctx.close(), 500);
-  } catch {
-    // Audio not supported — fail silently
+  } catch (err) {
+    console.error('[tab-out] playCloseSound error:', err);
   }
 }
 
@@ -459,6 +690,17 @@ function checkAndShowEmptyState() {
   const remaining = missionsEl.querySelectorAll('.mission-card:not(.closing)').length;
   if (remaining > 0) return;
 
+  const zenQuotes = [
+    { title: "Today is a clean slate.", subtitle: "Take a deep breath and start fresh." },
+    { title: "Inbox zero, but for tabs.", subtitle: "Your digital desk is completely clear." },
+    { title: "Living in the moment.", subtitle: "No open loops, no background noise." },
+    { title: "Ah, digital peace and quiet.", subtitle: "Time to make a warm cup of tea 🍵" },
+    { title: "All clear. You did it.", subtitle: "Go ahead, close your browser and enjoy the day." },
+    { title: "The workspace is clear.", subtitle: "Your focus is yours again." },
+    { title: "Zero tabs, infinite potential.", subtitle: "What are you going to build next?" }
+  ];
+  const randomZen = zenQuotes[Math.floor(Math.random() * zenQuotes.length)];
+
   missionsEl.innerHTML = `
     <div class="missions-empty-state">
       <div class="empty-checkmark">
@@ -466,8 +708,8 @@ function checkAndShowEmptyState() {
           <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
         </svg>
       </div>
-      <div class="empty-title">Inbox zero, but for tabs.</div>
-      <div class="empty-subtitle">You're free.</div>
+      <div class="empty-title">${randomZen.title}</div>
+      <div class="empty-subtitle">${randomZen.subtitle}</div>
     </div>
   `;
 
@@ -772,9 +1014,10 @@ function buildOverflowChips(hiddenTabs, urlCounts = {}) {
     const safeTitle = label.replace(/"/g, '&quot;');
     let domain = '';
     try { domain = new URL(tab.url).hostname; } catch {}
-    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
-    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" title="${safeTitle}">
-      ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">` : ''}
+    const faviconUrl = tab.favIconUrl || (domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '');
+    const searchText = `${label} ${tab.url}`.toLowerCase().replace(/"/g, '&quot;');
+    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" data-search-text="${searchText}" title="${safeTitle}">
+      ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="">` : ''}
       <span class="chip-text">${label}</span>${dupeTag}
       <div class="chip-actions">
         <button class="chip-action chip-save" data-action="defer-single-tab" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" title="Save for later">
@@ -853,9 +1096,10 @@ function renderDomainCard(group) {
     const safeTitle = label.replace(/"/g, '&quot;');
     let domain = '';
     try { domain = new URL(tab.url).hostname; } catch {}
-    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
-    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" title="${safeTitle}">
-      ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">` : ''}
+    const faviconUrl = tab.favIconUrl || (domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '');
+    const searchText = `${label} ${tab.url}`.toLowerCase().replace(/"/g, '&quot;');
+    return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" data-search-text="${searchText}" title="${safeTitle}">
+      ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="">` : ''}
       <span class="chip-text">${label}</span>${dupeTag}
       <div class="chip-actions">
         <button class="chip-action chip-save" data-action="defer-single-tab" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" title="Save for later">
@@ -948,12 +1192,15 @@ async function renderDeferredColumn() {
     }
 
     // Render archive section
+    const btnClear = document.getElementById('btnClearArchive');
     if (archived.length > 0) {
       archiveCountEl.textContent = `(${archived.length})`;
       archiveList.innerHTML = archived.map(item => renderArchiveItem(item)).join('');
       archiveEl.style.display = 'block';
+      if (btnClear) btnClear.style.display = 'inline-flex';
     } else {
       archiveEl.style.display = 'none';
+      if (btnClear) btnClear.style.display = 'none';
     }
 
   } catch (err) {
@@ -971,7 +1218,7 @@ async function renderDeferredColumn() {
 function renderDeferredItem(item) {
   let domain = '';
   try { domain = new URL(item.url).hostname.replace(/^www\./, ''); } catch {}
-  const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
+  const faviconUrl = item.favIconUrl || (domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '');
   const ago = timeAgo(item.savedAt);
 
   return `
@@ -979,7 +1226,7 @@ function renderDeferredItem(item) {
       <input type="checkbox" class="deferred-checkbox" data-action="check-deferred" data-deferred-id="${item.id}">
       <div class="deferred-info">
         <a href="${item.url}" target="_blank" rel="noopener" class="deferred-title" title="${(item.title || '').replace(/"/g, '&quot;')}">
-          <img src="${faviconUrl}" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px" onerror="this.style.display='none'">${item.title || item.url}
+          <img src="${faviconUrl}" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px">${item.title || item.url}
         </a>
         <div class="deferred-meta">
           <span>${domain}</span>
@@ -1000,11 +1247,14 @@ function renderDeferredItem(item) {
 function renderArchiveItem(item) {
   const ago = item.completedAt ? timeAgo(item.completedAt) : timeAgo(item.savedAt);
   return `
-    <div class="archive-item">
+    <div class="archive-item" data-deferred-id="${item.id}">
       <a href="${item.url}" target="_blank" rel="noopener" class="archive-item-title" title="${(item.title || '').replace(/"/g, '&quot;')}">
         ${item.title || item.url}
       </a>
       <span class="archive-item-date">${ago}</span>
+      <button class="archive-dismiss" data-action="delete-archive" data-deferred-id="${item.id}" title="Delete permanently">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+      </button>
     </div>`;
 }
 
@@ -1171,6 +1421,15 @@ async function renderStaticDashboard() {
 
   // --- Render "Saved for Later" column ---
   await renderDeferredColumn();
+
+  // --- Re-apply search filter if active ---
+  const searchInput = document.getElementById('globalSearch');
+  if (searchInput && searchInput.value) {
+    filterTabs(searchInput.value);
+  }
+
+  // --- Update session snapshot action buttons ---
+  await updateSessionButtonsVisibility();
 }
 
 async function renderDashboard() {
@@ -1187,6 +1446,26 @@ async function renderDashboard() {
    ---------------------------------------------------------------- */
 
 document.addEventListener('click', async (e) => {
+  // Synchronously warm up the shared AudioContext within the user's click gesture.
+  // This is crucial because browser security policies block AudioContext from starting
+  // after asynchronous tasks (like 'await' commands).
+  initAudioContext();
+
+  // ---- Handle Session Action Buttons (Snapshot & Restore) ----
+  const saveBtn = e.target.closest('#btnSaveSession');
+  if (saveBtn) {
+    e.preventDefault();
+    await saveCurrentSession();
+    return;
+  }
+
+  const restoreBtn = e.target.closest('#btnRestoreSession');
+  if (restoreBtn) {
+    e.preventDefault();
+    await restoreSession();
+    return;
+  }
+
   // Walk up the DOM to find the nearest element with data-action
   const actionEl = e.target.closest('[data-action]');
   if (!actionEl) return;
@@ -1195,8 +1474,9 @@ document.addEventListener('click', async (e) => {
 
   // ---- Close duplicate Tab Out tabs ----
   if (action === 'close-tabout-dupes') {
-    await closeTabOutDupes();
+    const closedCount = await closeTabOutDupes();
     playCloseSound();
+    triggerCombo(closedCount);
     const banner = document.getElementById('tabOutDupeBanner');
     if (banner) {
       banner.style.transition = 'opacity 0.4s';
@@ -1204,6 +1484,7 @@ document.addEventListener('click', async (e) => {
       setTimeout(() => { banner.style.display = 'none'; banner.style.opacity = '1'; }, 400);
     }
     showToast('Closed extra Tab Out tabs');
+    await renderStaticDashboard();
     return;
   }
 
@@ -1235,29 +1516,48 @@ document.addEventListener('click', async (e) => {
     // Close the tab in Chrome directly
     const allTabs = await chrome.tabs.query({});
     const match   = allTabs.find(t => t.url === tabUrl);
-    if (match) await chrome.tabs.remove(match.id);
+    if (match) await removeTabsSafely(match.id);
     await fetchOpenTabs();
 
     playCloseSound();
+    triggerCombo(1);
 
-    // Animate the chip row out
+    // Animate the chip row out (slides left to discard)
     const chip = actionEl.closest('.page-chip');
     if (chip) {
       const rect = chip.getBoundingClientRect();
       shootConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
-      chip.style.transition = 'opacity 0.2s, transform 0.2s';
+      chip.style.transition = 'opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1)';
       chip.style.opacity    = '0';
-      chip.style.transform  = 'scale(0.8)';
+      chip.style.transform  = 'translateX(-30px) scale(0.95)';
       setTimeout(() => {
+        const parentCard = chip.closest('.mission-card');
         chip.remove();
-        // If the card now has no tabs, remove it too
-        const parentCard = document.querySelector('.mission-card:has(.mission-pages:empty)');
-        if (parentCard) animateCardOut(parentCard);
-        document.querySelectorAll('.mission-card').forEach(c => {
-          if (c.querySelectorAll('.page-chip[data-action="focus-tab"]').length === 0) {
-            animateCardOut(c);
+
+        if (parentCard) {
+          const remainingChips = parentCard.querySelectorAll('.page-chip').length;
+          if (remainingChips === 0) {
+            animateCardOut(parentCard);
+          } else {
+            // Update card header tab badge dynamically
+            const badge = parentCard.querySelector('.open-tabs-badge');
+            if (badge) {
+              badge.innerHTML = `${ICONS.tabs} ${remainingChips} tab${remainingChips !== 1 ? 's' : ''} open`;
+            }
+            // Update card footer close button dynamically
+            const closeBtn = parentCard.querySelector('[data-action="close-domain-tabs"]');
+            if (closeBtn) {
+              closeBtn.innerHTML = `${ICONS.close} Close all ${remainingChips} tab${remainingChips !== 1 ? 's' : ''}`;
+            }
           }
-        });
+        }
+
+        // Update global "Close all N tabs" button count dynamically
+        const totalRealTabsLeft = getRealTabs().length;
+        const closeAllBtn = document.querySelector('[data-action="close-all-open-tabs"]');
+        if (closeAllBtn) {
+          closeAllBtn.innerHTML = `${ICONS.close} Close all ${totalRealTabsLeft} tabs`;
+        }
       }, 200);
     }
 
@@ -1278,7 +1578,14 @@ document.addEventListener('click', async (e) => {
 
     // Save to chrome.storage.local
     try {
-      await saveTabForLater({ url: tabUrl, title: tabTitle });
+      const allTabs = await chrome.tabs.query({});
+      const match   = allTabs.find(t => t.url === tabUrl);
+      await saveTabForLater({
+        url: tabUrl,
+        title: tabTitle,
+        favIconUrl: match ? match.favIconUrl : ''
+      });
+      playSaveSound();
     } catch (err) {
       console.error('[tab-out] Failed to save tab:', err);
       showToast('Failed to save tab');
@@ -1288,17 +1595,49 @@ document.addEventListener('click', async (e) => {
     // Close the tab in Chrome
     const allTabs = await chrome.tabs.query({});
     const match   = allTabs.find(t => t.url === tabUrl);
-    if (match) await chrome.tabs.remove(match.id);
+    if (match) await removeTabsSafely(match.id);
     await fetchOpenTabs();
 
-    // Animate chip out
+    // Animate chip out (slides right towards Saved for Later sidebar)
     const chip = actionEl.closest('.page-chip');
     if (chip) {
-      chip.style.transition = 'opacity 0.2s, transform 0.2s';
+      chip.style.transition = 'opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1)';
       chip.style.opacity    = '0';
-      chip.style.transform  = 'scale(0.8)';
-      setTimeout(() => chip.remove(), 200);
+      chip.style.transform  = 'translateX(30px) scale(0.95)';
+      setTimeout(() => {
+        const parentCard = chip.closest('.mission-card');
+        chip.remove();
+
+        if (parentCard) {
+          const remainingChips = parentCard.querySelectorAll('.page-chip').length;
+          if (remainingChips === 0) {
+            animateCardOut(parentCard);
+          } else {
+            // Update card header tab badge dynamically
+            const badge = parentCard.querySelector('.open-tabs-badge');
+            if (badge) {
+              badge.innerHTML = `${ICONS.tabs} ${remainingChips} tab${remainingChips !== 1 ? 's' : ''} open`;
+            }
+            // Update card footer close button dynamically
+            const closeBtn = parentCard.querySelector('[data-action="close-domain-tabs"]');
+            if (closeBtn) {
+              closeBtn.innerHTML = `${ICONS.close} Close all ${remainingChips} tab${remainingChips !== 1 ? 's' : ''}`;
+            }
+          }
+        }
+
+        // Update global "Close all N tabs" button count dynamically
+        const totalRealTabsLeft = getRealTabs().length;
+        const closeAllBtn = document.querySelector('[data-action="close-all-open-tabs"]');
+        if (closeAllBtn) {
+          closeAllBtn.innerHTML = `${ICONS.close} Close all ${totalRealTabsLeft} tabs`;
+        }
+      }, 250);
     }
+
+    // Update footer
+    const statTabs = document.getElementById('statTabs');
+    if (statTabs) statTabs.textContent = openTabs.length;
 
     showToast('Saved for later');
     await renderDeferredColumn();
@@ -1311,6 +1650,7 @@ document.addEventListener('click', async (e) => {
     if (!id) return;
 
     await checkOffSavedTab(id);
+    playChimeSound();
 
     // Animate: strikethrough first, then slide out
     const item = actionEl.closest('.deferred-item');
@@ -1345,6 +1685,52 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  // ---- Delete an archived/completed tab permanently ----
+  if (action === 'delete-archive') {
+    const id = actionEl.dataset.deferredId;
+    if (!id) return;
+
+    await dismissSavedTab(id); // dismiss sets dismissed=true, which filters it out forever
+
+    const item = actionEl.closest('.archive-item');
+    if (item) {
+      item.classList.add('removing');
+      setTimeout(() => {
+        item.remove();
+        renderDeferredColumn();
+      }, 300);
+    }
+    return;
+  }
+
+  // ---- Clear ALL archived items permanently ----
+  if (action === 'clear-archive') {
+    const { deferred = [] } = await chrome.storage.local.get('deferred');
+    
+    // Set dismissed=true on ALL completed items so they vanish permanently
+    deferred.forEach(item => {
+      if (item.completed) {
+        item.dismissed = true;
+      }
+    });
+
+    await chrome.storage.local.set({ deferred });
+
+    // Animate all archive items sliding away
+    const items = document.querySelectorAll('.archive-item');
+    items.forEach((item, index) => {
+      setTimeout(() => {
+        item.classList.add('removing');
+      }, index * 40); // cascading slide-out effect
+    });
+
+    setTimeout(() => {
+      renderDeferredColumn();
+      showToast('Archive cleared permanently');
+    }, Math.max(300, items.length * 40 + 150));
+    return;
+  }
+
   // ---- Close all tabs in a domain group ----
   if (action === 'close-domain-tabs') {
     const domainId = actionEl.dataset.domainId;
@@ -1367,6 +1753,7 @@ document.addEventListener('click', async (e) => {
     if (card) {
       playCloseSound();
       animateCardOut(card);
+      triggerCombo(group.tabs.length);
     }
 
     // Remove from in-memory groups
@@ -1387,13 +1774,17 @@ document.addEventListener('click', async (e) => {
     const urls = urlsEncoded.split(',').map(u => decodeURIComponent(u)).filter(Boolean);
     if (urls.length === 0) return;
 
-    await closeDuplicateTabs(urls, true);
+    const closedCount = await closeDuplicateTabs(urls, true);
     playCloseSound();
+    triggerCombo(closedCount);
 
-    // Hide the dedup button
+    // Hide the dedup button and trigger full UI update when animation completes
     actionEl.style.transition = 'opacity 0.2s';
     actionEl.style.opacity    = '0';
-    setTimeout(() => actionEl.remove(), 200);
+    setTimeout(async () => {
+      actionEl.remove();
+      await renderStaticDashboard();
+    }, 200);
 
     // Remove dupe badges from the card
     if (card) {
@@ -1424,6 +1815,7 @@ document.addEventListener('click', async (e) => {
       .map(t => t.url);
     await closeTabsByUrls(allUrls);
     playCloseSound();
+    triggerCombo(allUrls.length);
 
     document.querySelectorAll('#openTabsMissions .mission-card').forEach(c => {
       shootConfetti(
@@ -1446,7 +1838,7 @@ document.addEventListener('click', (e) => {
   toggle.classList.toggle('open');
   const body = document.getElementById('archiveBody');
   if (body) {
-    body.style.display = body.style.display === 'none' ? 'block' : 'none';
+    body.classList.toggle('open');
   }
 });
 
@@ -1482,6 +1874,518 @@ document.addEventListener('input', async (e) => {
 
 
 /* ----------------------------------------------------------------
+   GLOBAL SEARCH & LIVE FILTERING
+   ---------------------------------------------------------------- */
+
+/**
+ * filterTabs(query)
+ *
+ * Synchronously filters DOM elements (.page-chip) and (.mission-card)
+ * based on the user's search query, and toggles the empty state.
+ */
+function filterTabs(query) {
+  const q = query.trim().toLowerCase();
+  
+  const chips = document.querySelectorAll('.page-chip[data-search-text]');
+  const cards = document.querySelectorAll('.mission-card');
+  const emptyState = document.getElementById('searchEmptyState');
+  
+  if (!q) {
+    // Reset everything
+    chips.forEach(chip => {
+      chip.classList.remove('filtered-out');
+      // Restore original text (removing highlights)
+      const textSpan = chip.querySelector('.chip-text');
+      if (textSpan && textSpan.dataset.originalText) {
+        textSpan.innerHTML = textSpan.dataset.originalText;
+      }
+    });
+    
+    cards.forEach(card => {
+      card.classList.remove('card-hidden');
+      // Reset overflow containers if they were expanded due to search
+      const overflow = card.querySelector('.page-chips-overflow');
+      if (overflow && overflow.dataset.wasAutoExpanded) {
+        overflow.style.display = 'none';
+        delete overflow.dataset.wasAutoExpanded;
+        // Re-add expansion link if it was hidden
+        const expandBtn = card.querySelector('[data-action="expand-chips"]');
+        if (expandBtn) expandBtn.style.display = 'flex';
+      }
+    });
+    
+    if (emptyState) emptyState.style.display = 'none';
+    return;
+  }
+  
+  // Track visible cards
+  let visibleCardCount = 0;
+  
+  cards.forEach(card => {
+    const cardChips = card.querySelectorAll('.page-chip[data-search-text]');
+    let hasMatchInCard = false;
+    let hasMatchInOverflow = false;
+    
+    cardChips.forEach(chip => {
+      const text = chip.dataset.searchText || '';
+      const textSpan = chip.querySelector('.chip-text');
+      
+      // Store original text for restoring later
+      if (textSpan && !textSpan.dataset.originalText) {
+        textSpan.dataset.originalText = textSpan.innerHTML;
+      }
+      
+      if (text.includes(q)) {
+        chip.classList.remove('filtered-out');
+        hasMatchInCard = true;
+        
+        // Check if chip is inside the overflow container
+        if (chip.parentElement.classList.contains('page-chips-overflow')) {
+          hasMatchInOverflow = true;
+        }
+        
+        // Highlight matched text
+        if (textSpan) {
+          const original = textSpan.dataset.originalText;
+          const regex = new RegExp(`(${escapeRegExp(q)})`, 'gi');
+          textSpan.innerHTML = original.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+      } else {
+        chip.classList.add('filtered-out');
+        // Restore original text if not matched
+        if (textSpan && textSpan.dataset.originalText) {
+          textSpan.innerHTML = textSpan.dataset.originalText;
+        }
+      }
+    });
+    
+    // Auto-expand overflow container if a match is found inside it
+    const overflow = card.querySelector('.page-chips-overflow');
+    const expandBtn = card.querySelector('[data-action="expand-chips"]');
+    if (overflow) {
+      if (hasMatchInOverflow) {
+        overflow.style.display = 'contents';
+        overflow.dataset.wasAutoExpanded = 'true';
+        if (expandBtn) expandBtn.style.display = 'none';
+      } else {
+        // If no match in overflow, hide it unless it was manually expanded
+        if (overflow.dataset.wasAutoExpanded) {
+          overflow.style.display = 'none';
+          delete overflow.dataset.wasAutoExpanded;
+          if (expandBtn) expandBtn.style.display = 'flex';
+        }
+      }
+    }
+    
+    if (hasMatchInCard) {
+      card.classList.remove('card-hidden');
+      visibleCardCount++;
+    } else {
+      card.classList.add('card-hidden');
+    }
+  });
+  
+  // Toggle zero matches empty state
+  if (emptyState) {
+    emptyState.style.display = visibleCardCount === 0 ? 'block' : 'none';
+  }
+}
+
+/**
+ * escapeRegExp(string)
+ *
+ * Helper to escape special characters for regex matching.
+ */
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ---- Global tab search — filter open tabs as user types ----
+// State for search autocomplete dropdown keyboard navigation
+let activeDropdownIndex = -1;
+let dropdownMatches = [];
+
+/**
+ * updateSearchDropdown(query)
+ *
+ * Populates the autocomplete dropdown with matched tabs, highlighting query text,
+ * and handles show/hide logic.
+ */
+function updateSearchDropdown(query) {
+  const dropdown = document.getElementById('searchDropdown');
+  if (!dropdown) return;
+
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+    dropdownMatches = [];
+    activeDropdownIndex = -1;
+    return;
+  }
+
+  // Find all matching open tabs (excluding Tab Out's own page)
+  const realTabs = getRealTabs();
+  dropdownMatches = realTabs.filter(t => 
+    (t.title || '').toLowerCase().includes(q) || 
+    (t.url || '').toLowerCase().includes(q)
+  );
+
+  if (dropdownMatches.length === 0) {
+    dropdown.innerHTML = '<div class="dropdown-no-results">No suggestions found</div>';
+    dropdown.style.display = 'block';
+    activeDropdownIndex = -1;
+    return;
+  }
+
+  // Limit to top 6 results for premium, readable HUD dropdown
+  const displayMatches = dropdownMatches.slice(0, 6);
+  dropdownMatches = displayMatches; // Keep state in sync with rendered elements
+  activeDropdownIndex = 0; // Default to first item selected for instant press-Enter ease
+
+  const itemsHtml = displayMatches.map((tab, idx) => {
+    let domain = '';
+    try { domain = new URL(tab.url).hostname.replace(/^www\./, ''); } catch {}
+    const faviconUrl = tab.favIconUrl || (domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '');
+    const activeClass = idx === 0 ? ' active' : '';
+
+    // Highlight matches in title and URL
+    const title = tab.title || tab.url;
+    const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+    const highlightedTitle = title.replace(regex, '<span class="search-highlight">$1</span>');
+    const highlightedUrl = tab.url.replace(regex, '<span class="search-highlight">$1</span>');
+
+    return `
+      <div class="dropdown-item${activeClass}" data-index="${idx}" data-url="${encodeURIComponent(tab.url)}">
+        ${faviconUrl ? `<img class="dropdown-favicon" src="${faviconUrl}" alt="">` : ''}
+        <div class="dropdown-info">
+          <div class="dropdown-title">${highlightedTitle}</div>
+          <div class="dropdown-url">${highlightedUrl}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  dropdown.innerHTML = itemsHtml;
+  dropdown.style.display = 'block';
+}
+
+/**
+ * updateActiveDropdownItem()
+ *
+ * Synchronizes the .active class on the dropdown elements and scrolls them into view.
+ */
+function updateActiveDropdownItem() {
+  const items = document.querySelectorAll('.dropdown-item');
+  items.forEach((item, idx) => {
+    if (idx === activeDropdownIndex) {
+      item.classList.add('active');
+      item.scrollIntoView({ block: 'nearest' });
+    } else {
+      item.classList.remove('active');
+    }
+  });
+}
+
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'globalSearch') return;
+  filterTabs(e.target.value);
+  updateSearchDropdown(e.target.value);
+});
+
+// ---- Key bindings for quick search and escape ----
+document.addEventListener('keydown', (e) => {
+  const active = document.activeElement;
+  const isInput = active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable;
+  
+  // Press '/' to search
+  if (e.key === '/' && !isInput) {
+    e.preventDefault();
+    const searchInput = document.getElementById('globalSearch');
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.select();
+    }
+  }
+  
+  // Press 'Esc' to clear and blur
+  if (e.key === 'Escape' && active.id === 'globalSearch') {
+    active.value = '';
+    filterTabs('');
+    updateSearchDropdown('');
+    active.blur();
+  }
+
+  // Intercept ArrowUp/ArrowDown/Enter keys inside search bar for autocomplete list navigation
+  if (active.id === 'globalSearch') {
+    const hasMatches = dropdownMatches.length > 0;
+
+    if (e.key === 'ArrowDown' && hasMatches) {
+      e.preventDefault();
+      activeDropdownIndex = (activeDropdownIndex + 1) % dropdownMatches.length;
+      updateActiveDropdownItem();
+    } else if (e.key === 'ArrowUp' && hasMatches) {
+      e.preventDefault();
+      activeDropdownIndex = (activeDropdownIndex - 1 + dropdownMatches.length) % dropdownMatches.length;
+      updateActiveDropdownItem();
+    } else if (e.key === 'Enter' && hasMatches && activeDropdownIndex >= 0) {
+      e.preventDefault();
+      const targetTab = dropdownMatches[activeDropdownIndex];
+      if (targetTab && targetTab.url) {
+        focusTab(targetTab.url);
+        // Reset search
+        active.value = '';
+        filterTabs('');
+        updateSearchDropdown('');
+        active.blur();
+      }
+    }
+  }
+});
+
+// ---- Handle clicking on dropdown item or clicking outside to close it ----
+document.addEventListener('click', (e) => {
+  const dropdownItem = e.target.closest('.dropdown-item');
+  if (dropdownItem) {
+    const url = decodeURIComponent(dropdownItem.dataset.url);
+    if (url) {
+      focusTab(url);
+      const searchInput = document.getElementById('globalSearch');
+      if (searchInput) {
+        searchInput.value = '';
+        filterTabs('');
+        updateSearchDropdown('');
+        searchInput.blur();
+      }
+    }
+    return;
+  }
+
+  // Click outside to close dropdown
+  if (!e.target.closest('.search-container')) {
+    const dropdown = document.getElementById('searchDropdown');
+    if (dropdown) dropdown.style.display = 'none';
+  }
+});
+
+// ---- Capture image load errors and hide broken favicons without violating CSP ----
+document.addEventListener('error', (e) => {
+  if (e.target.tagName === 'IMG') {
+    e.target.style.display = 'none';
+  }
+}, true); // Use capturing phase because 'error' event does not bubble!
+
+
+// ---- Auto-update dashboard in real-time when browser tabs change ----
+chrome.tabs.onCreated.addListener(() => {
+  renderStaticDashboard();
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  // Only re-render if URL, title, or loading status changed to avoid redundant layout repaints
+  if (changeInfo.url || changeInfo.title || changeInfo.status === 'complete') {
+    renderStaticDashboard();
+  }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  // If the tab was closed programmatically from our UI, let the UI animation handle it
+  // and do not trigger a full re-render that would disrupt the active animation.
+  if (programmaticallyClosedTabIds.has(tabId)) {
+    programmaticallyClosedTabIds.delete(tabId);
+    return;
+  }
+  renderStaticDashboard();
+});
+
+
+// ---- Cyberpunk/HUD Sci-fi Custom Cursor Animation Engine ----
+function initTechCursor() {
+  const dot = document.getElementById('techCursorDot');
+  const ring = document.getElementById('techCursorRing');
+  const html = document.documentElement;
+
+  if (!dot || !ring) return;
+
+  // Only activate custom cursor on devices that support hover (e.g. desktops with mice)
+  if (!window.matchMedia('(hover: hover)').matches) {
+    return;
+  }
+
+  html.classList.add('has-custom-cursor');
+
+  let mouseX = -100;
+  let mouseY = -100;
+  let ringX = -100;
+  let ringY = -100;
+  let isHovering = false;
+  let isFirstMove = true;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    
+    if (isFirstMove) {
+      ringX = mouseX;
+      ringY = mouseY;
+      isFirstMove = false;
+    }
+    
+    // Dot instantly follows the mouse pointer for pixel-perfect responsiveness
+    dot.style.left = `${mouseX}px`;
+    dot.style.top = `${mouseY}px`;
+    
+    // Dynamic hover target detection
+    const target = e.target;
+    const isInteractive = target.closest('a, button, input, .clickable, .page-chip, .archive-toggle, .deferred-checkbox, .deferred-dismiss');
+    
+    if (isInteractive && !isHovering) {
+      isHovering = true;
+      html.classList.add('cursor-hovering');
+    } else if (!isInteractive && isHovering) {
+      isHovering = false;
+      html.classList.remove('cursor-hovering');
+    }
+  });
+
+  // Smooth floating orbit animation via Lerp (Linear Interpolation) inside requestAnimationFrame
+  function updateRingPosition() {
+    // 0.15 is the interpolation factor (the smaller, the smoother/more floaty the delay)
+    ringX += (mouseX - ringX) * 0.15;
+    ringY += (mouseY - ringY) * 0.15;
+
+    ring.style.left = `${ringX}px`;
+    ring.style.top = `${ringY}px`;
+
+    requestAnimationFrame(updateRingPosition);
+  }
+  requestAnimationFrame(updateRingPosition);
+
+  // Click pulse compress state
+  document.addEventListener('mousedown', () => {
+    html.classList.add('cursor-clicking');
+  });
+
+  document.addEventListener('mouseup', () => {
+    html.classList.remove('cursor-clicking');
+  });
+
+  // Hide cursor on leaving browser window boundary
+  document.addEventListener('mouseleave', () => {
+    dot.style.opacity = '0';
+    ring.style.opacity = '0';
+  });
+
+  document.addEventListener('mouseenter', () => {
+    dot.style.opacity = '1';
+    ring.style.opacity = '1';
+  });
+}
+
+
+/* ----------------------------------------------------------------
+   SESSION BACKUP & ONE-KEY RESTORE (REBOOT PROTECTION)
+   ---------------------------------------------------------------- */
+
+/**
+ * saveCurrentSession()
+ *
+ * One-key save all current open real tabs to "Saved for Later" checklist
+ * and backup their URLs for instant restoration.
+ */
+async function saveCurrentSession() {
+  const realTabs = getRealTabs();
+  if (realTabs.length === 0) {
+    showToast('No open tabs to save!');
+    return;
+  }
+
+  // Play satisfying save sound
+  playSaveSound();
+
+  // Backup these URLs specifically as the last session
+  const urls = realTabs.map(t => t.url);
+  await chrome.storage.local.set({ last_session_backup: urls });
+
+  // Re-fetch and update UI to show the Restore Session button with count
+  await renderStaticDashboard();
+  
+  showToast(`Backed up session with ${urls.length} tab${urls.length !== 1 ? 's' : ''}! Safe to reboot at any time.`);
+}
+
+/**
+ * restoreSession()
+ *
+ * One-key restore all tabs saved in the last session, and archive them
+ * from the checklist.
+ */
+async function restoreSession() {
+  const { last_session_backup = [] } = await chrome.storage.local.get('last_session_backup');
+  if (last_session_backup.length === 0) {
+    showToast('No saved session found!');
+    return;
+  }
+
+  // Play combo/restore sound
+  playChimeSound();
+
+  // Get currently open URLs to avoid opening duplicates of tabs that are already open
+  const currentlyOpenUrls = new Set(openTabs.map(t => t.url));
+  const urlsToRestore = last_session_backup.filter(url => !currentlyOpenUrls.has(url));
+
+  if (urlsToRestore.length > 0) {
+    // Create new tabs in the background in parallel and wait for all of them to be registered,
+    // preventing a race condition where fetchOpenTabs runs before the tabs are created in Chrome.
+    try {
+      await Promise.all(urlsToRestore.map(url => chrome.tabs.create({ url, active: false })));
+    } catch (err) {
+      console.error('[tab-out] Failed to restore some tabs:', err);
+    }
+  }
+
+  // Update check-list: complete/archive those URLs
+  const { deferred = [] } = await chrome.storage.local.get('deferred');
+  const backupSet = new Set(last_session_backup);
+  deferred.forEach(item => {
+    if (backupSet.has(item.url)) {
+      item.completed = true;
+    }
+  });
+
+  // Clear session backup
+  await chrome.storage.local.set({ deferred, last_session_backup: [] });
+
+  // Re-fetch and update UI (this will also hide the Restore Session button)
+  await renderStaticDashboard();
+
+  if (urlsToRestore.length === 0) {
+    showToast('All tabs from this session are already open!');
+  } else {
+    showToast(`Restored ${urlsToRestore.length} closed tab${urlsToRestore.length !== 1 ? 's' : ''}!`);
+  }
+}
+
+/**
+ * updateSessionButtonsVisibility()
+ *
+ * Keeps the "Restore Session" button synced with the backup status.
+ */
+async function updateSessionButtonsVisibility() {
+  const btnRestore = document.getElementById('btnRestoreSession');
+  if (!btnRestore) return;
+
+  const { last_session_backup = [] } = await chrome.storage.local.get('last_session_backup');
+  if (last_session_backup && last_session_backup.length > 0) {
+    btnRestore.style.display = 'inline-flex';
+    btnRestore.querySelector('span').textContent = `Restore Session (${last_session_backup.length})`;
+  } else {
+    btnRestore.style.display = 'none';
+  }
+}
+
+
+/* ----------------------------------------------------------------
    INITIALIZE
    ---------------------------------------------------------------- */
+initTechCursor();
 renderDashboard();

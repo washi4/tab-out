@@ -19,12 +19,47 @@
   <!-- ================================================================
        HEADER — greeting on the left
        ================================================================ -->
+  <!-- ================================================================
+       HEADER — greeting on the left, search bar on the right
+       ================================================================ -->
   <header>
     <div class="header-left">
       <!-- "Good afternoon" — written by getGreeting() in app.js -->
       <h1 id="greeting"></h1>
       <!-- "Friday, April 4, 2026" — written by getDateDisplay() in app.js -->
       <div class="date" id="dateDisplay"></div>
+    </div>
+
+    <div class="header-right">
+      <!-- Session Actions (Snapshot / Restore) -->
+      <div class="session-actions" id="sessionActions">
+        <button class="tactile-btn" id="btnSaveSession" title="Save and close all currently open tabs (perfect for reboots!)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Save Session</span>
+        </button>
+        <button class="tactile-btn secondary" id="btnRestoreSession" title="Restore all tabs from your last saved session" style="display: none;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 15l-6 5L3 15M9 20V4a2 2 0 012-2h4a2 2 0 012 2v16l-6-5z" />
+          </svg>
+          <span>Restore Session</span>
+        </button>
+      </div>
+
+      <!-- ================================================================
+           GLOBAL SEARCH BAR — quickly filter open tabs across all cards
+           ================================================================ -->
+      <div class="search-container" id="searchBarContainer">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+          </svg>
+          <input type="text" id="globalSearch" placeholder="Search open tabs..." autocomplete="off">
+          <span class="search-shortcut" id="searchShortcut">/</span>
+        </div>
+        <div class="search-dropdown" id="searchDropdown" style="display:none"></div>
+      </div>
     </div>
   </header>
 
@@ -62,6 +97,9 @@
         <div class="section-count" id="openTabsSectionCount"></div>
       </div>
       <div class="missions" id="openTabsMissions"></div>
+      <div class="search-empty" id="searchEmptyState" style="display:none">
+        No matches found. Maybe it's in another universe? 🌌
+      </div>
     </div>
 
     <!-- RIGHT COLUMN: Saved for Later checklist -->
@@ -82,12 +120,17 @@
 
       <!-- Archive section — collapsed by default -->
       <div class="deferred-archive" id="deferredArchive" style="display:none">
-        <button class="archive-toggle" id="archiveToggle">
-          <svg class="archive-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
-          Archive
-          <span class="archive-count" id="archiveCount"></span>
-        </button>
-        <div class="archive-body" id="archiveBody" style="display:none">
+        <div class="archive-header" style="display: flex; align-items: center; justify-content: space-between;">
+          <button class="archive-toggle" id="archiveToggle" style="flex: 1;">
+            <svg class="archive-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+            Archive
+            <span class="archive-count" id="archiveCount"></span>
+          </button>
+          <button class="action-btn" id="btnClearArchive" data-action="clear-archive" title="Clear all archived items permanently" style="font-size: 10px; padding: 2px 8px; margin-left: 8px; background: rgba(220, 90, 90, 0.08); border-color: rgba(220, 90, 90, 0.15); color: var(--status-abandoned); display: none;">
+            Clear All
+          </button>
+        </div>
+        <div class="archive-body" id="archiveBody">
           <input type="text" class="archive-search" id="archiveSearch" placeholder="Search archived tabs...">
           <div class="archive-list" id="archiveList"></div>
         </div>
@@ -125,9 +168,13 @@
   <span id="toastText"></span>
 </div>
 
+<!-- Custom Cyberpunk/Tech Cursor Elements -->
+<div class="tech-cursor-dot" id="techCursorDot"></div>
+<div class="tech-cursor-ring" id="techCursorRing"></div>
+
 <!-- Personal config (gitignored) — defines LOCAL_LANDING_PAGE_PATTERNS etc. -->
 <!-- If the file doesn't exist, that's fine — app.js uses sensible defaults. -->
-<script src="config.local.js" onerror="/* no personal config, that's fine */"></script>
+<script src="config.local.js"></script>
 
 <!-- Main dashboard logic — loads last so the DOM is ready -->
 <script src="app.js"></script>
