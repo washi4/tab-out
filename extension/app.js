@@ -1524,15 +1524,33 @@ document.addEventListener('click', async (e) => {
       chip.style.opacity    = '0';
       chip.style.transform  = 'translateX(-30px) scale(0.95)';
       setTimeout(() => {
+        const parentCard = chip.closest('.mission-card');
         chip.remove();
-        // If the card now has no tabs, remove it too
-        const parentCard = document.querySelector('.mission-card:has(.mission-pages:empty)');
-        if (parentCard) animateCardOut(parentCard);
-        document.querySelectorAll('.mission-card').forEach(c => {
-          if (c.querySelectorAll('.page-chip[data-action="focus-tab"]').length === 0) {
-            animateCardOut(c);
+
+        if (parentCard) {
+          const remainingChips = parentCard.querySelectorAll('.page-chip').length;
+          if (remainingChips === 0) {
+            animateCardOut(parentCard);
+          } else {
+            // Update card header tab badge dynamically
+            const badge = parentCard.querySelector('.open-tabs-badge');
+            if (badge) {
+              badge.innerHTML = `${ICONS.tabs} ${remainingChips} tab${remainingChips !== 1 ? 's' : ''} open`;
+            }
+            // Update card footer close button dynamically
+            const closeBtn = parentCard.querySelector('[data-action="close-domain-tabs"]');
+            if (closeBtn) {
+              closeBtn.innerHTML = `${ICONS.close} Close all ${remainingChips} tab${remainingChips !== 1 ? 's' : ''}`;
+            }
           }
-        });
+        }
+
+        // Update global "Close all N tabs" button count dynamically
+        const totalRealTabsLeft = getRealTabs().length;
+        const closeAllBtn = document.querySelector('[data-action="close-all-open-tabs"]');
+        if (closeAllBtn) {
+          closeAllBtn.innerHTML = `${ICONS.close} Close all ${totalRealTabsLeft} tabs`;
+        }
       }, 200);
     }
 
@@ -1580,15 +1598,33 @@ document.addEventListener('click', async (e) => {
       chip.style.opacity    = '0';
       chip.style.transform  = 'translateX(30px) scale(0.95)';
       setTimeout(() => {
+        const parentCard = chip.closest('.mission-card');
         chip.remove();
-        // If the card now has no tabs, remove it too
-        const parentCard = document.querySelector('.mission-card:has(.mission-pages:empty)');
-        if (parentCard) animateCardOut(parentCard);
-        document.querySelectorAll('.mission-card').forEach(c => {
-          if (c.querySelectorAll('.page-chip[data-action="focus-tab"]').length === 0) {
-            animateCardOut(c);
+
+        if (parentCard) {
+          const remainingChips = parentCard.querySelectorAll('.page-chip').length;
+          if (remainingChips === 0) {
+            animateCardOut(parentCard);
+          } else {
+            // Update card header tab badge dynamically
+            const badge = parentCard.querySelector('.open-tabs-badge');
+            if (badge) {
+              badge.innerHTML = `${ICONS.tabs} ${remainingChips} tab${remainingChips !== 1 ? 's' : ''} open`;
+            }
+            // Update card footer close button dynamically
+            const closeBtn = parentCard.querySelector('[data-action="close-domain-tabs"]');
+            if (closeBtn) {
+              closeBtn.innerHTML = `${ICONS.close} Close all ${remainingChips} tab${remainingChips !== 1 ? 's' : ''}`;
+            }
           }
-        });
+        }
+
+        // Update global "Close all N tabs" button count dynamically
+        const totalRealTabsLeft = getRealTabs().length;
+        const closeAllBtn = document.querySelector('[data-action="close-all-open-tabs"]');
+        if (closeAllBtn) {
+          closeAllBtn.innerHTML = `${ICONS.close} Close all ${totalRealTabsLeft} tabs`;
+        }
       }, 250);
     }
 
