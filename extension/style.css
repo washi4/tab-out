@@ -146,6 +146,71 @@ header {
   z-index: 4000;
 }
 
+/* ================================================================
+   DYNAMIC HEADER BUTTON COLLAPSE (MICRO-INTERACTION)
+   ================================================================ */
+
+/* Prepare the tactile buttons for smooth size transitions */
+.session-actions .tactile-btn {
+  transition: width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+              padding 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+              gap 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+              background 0.3s, border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 38px; /* Perfectly match search input and theme toggle height */
+  overflow: hidden;
+}
+
+/* Ensure child text span transitions its max-width and opacity smoothly */
+.session-actions .tactile-btn span {
+  display: inline-block;
+  max-width: 150px; /* Safe upper limit for button text */
+  opacity: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+              opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
+              margin-left 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* When the search bar expands (focused), collapse the header buttons into pristine icons */
+.header-right:has(.search-container:focus-within) .session-actions .tactile-btn {
+  width: 38px;
+  padding: 0;
+  gap: 0;
+  box-shadow: none; /* remove deep shadow when in compact icon state to stay clean */
+}
+
+.header-right:has(.search-container:focus-within) .session-actions .tactile-btn span {
+  max-width: 0;
+  opacity: 0;
+  margin: 0;
+}
+
+/* Restoring hover and active physical pop states for the collapsed 38px squircles */
+.header-right:has(.search-container:focus-within) .session-actions .tactile-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(200, 113, 58, 0.25);
+}
+
+.header-right:has(.search-container:focus-within) .session-actions .tactile-btn.secondary:hover {
+  box-shadow: 0 6px 14px rgba(26, 22, 19, 0.08);
+}
+
+/* Restoring glowing active states in Cyberpunk mode when focused/collapsed */
+.theme-cyberpunk .header-right:has(.search-container:focus-within) .session-actions .tactile-btn:hover {
+  box-shadow: 0 0 15px rgba(255, 0, 127, 0.3) !important;
+}
+
+.theme-cyberpunk .header-right:has(.search-container:focus-within) .session-actions #btnSaveWorkspace:hover {
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3) !important;
+}
+
+.theme-cyberpunk .header-right:has(.search-container:focus-within) .session-actions #btnRestoreSession:hover {
+  box-shadow: 0 0 15px rgba(200, 113, 58, 0.3) !important;
+}
+
 .search-input-wrapper {
   position: relative;
   display: flex;
