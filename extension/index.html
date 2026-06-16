@@ -19,12 +19,28 @@
   <!-- ================================================================
        HEADER — greeting on the left
        ================================================================ -->
+  <!-- ================================================================
+       HEADER — greeting on the left, search bar on the right
+       ================================================================ -->
   <header>
     <div class="header-left">
       <!-- "Good afternoon" — written by getGreeting() in app.js -->
       <h1 id="greeting"></h1>
       <!-- "Friday, April 4, 2026" — written by getDateDisplay() in app.js -->
       <div class="date" id="dateDisplay"></div>
+    </div>
+
+    <!-- ================================================================
+         GLOBAL SEARCH BAR — quickly filter open tabs across all cards
+         ================================================================ -->
+    <div class="search-container" id="searchBarContainer">
+      <div class="search-input-wrapper">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+        </svg>
+        <input type="text" id="globalSearch" placeholder="Search open tabs..." autocomplete="off">
+        <span class="search-shortcut" id="searchShortcut">/</span>
+      </div>
     </div>
   </header>
 
@@ -44,19 +60,6 @@
       </div>
     </div>
     <button class="tab-cleanup-btn" data-action="close-tabout-dupes">Close extras</button>
-  </div>
-
-  <!-- ================================================================
-       GLOBAL SEARCH BAR — quickly filter open tabs across all cards
-       ================================================================ -->
-  <div class="search-container" id="searchBarContainer">
-    <div class="search-input-wrapper">
-      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
-      </svg>
-      <input type="text" id="globalSearch" placeholder="Search open tabs..." autocomplete="off">
-      <span class="search-shortcut" id="searchShortcut">/</span>
-    </div>
   </div>
 
   <!-- ================================================================
