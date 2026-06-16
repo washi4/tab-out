@@ -1,10 +1,15 @@
 # Tab Out
 
-**Keep tabs on your tabs.**
+> **Keep tabs on your tabs.**
 
-Tab Out is a Chromium extension that replaces your new tab page with a dashboard of everything you have open. Tabs are grouped by domain, with homepages (Gmail, X, LinkedIn, etc.) pulled into their own group. Close tabs with a satisfying swoosh + confetti.
+[![Chrome Extension](https://img.shields.io/badge/Platform-Chrome%20%7C%20Edge-blue?style=flat-square&logo=google-chrome&logoColor=white)](https://github.com/washi4/tab-out)
+[![Manifest V3](https://img.shields.io/badge/Extension-Manifest%20V3-orange?style=flat-square)](https://github.com/washi4/tab-out)
+[![Privacy Friendly](https://img.shields.io/badge/Privacy-100%25%20Offline-success?style=flat-square&logo=lock)](https://github.com/washi4/tab-out)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
 
-No server. No account. No external API calls. Just a browser extension that works in Chrome and Edge.
+Tab Out is a Chromium extension that replaces your default new tab page with a beautiful, responsive dashboard of everything you have open. Tabs are grouped cleanly by domain, with essential homepages (Gmail, X, LinkedIn, GitHub, etc.) elegantly isolated at the top. Close tabs with a satisfying physics-based swoosh and dynamic confetti bursts.
+
+**No servers. No tracking. No accounts. 100% offline.**
 
 ![Tab Out Screenshot](./tapout.png)
 
@@ -62,12 +67,21 @@ You'll see Tab Out.
 ## How it works
 
 ```
-You open a new tab
-  -> Tab Out shows your open tabs grouped by domain
-  -> Homepages (Gmail, X, etc.) get their own group at the top
-  -> Click any tab title to jump to it
-  -> Close groups you're done with (swoosh + confetti)
-  -> Save tabs for later before closing them
+[ Open a New Tab ]
+        │
+        ▼
+┌──────────────────────────────────────┐
+│  Tab Out groups open tabs by domain  │
+├──────────────────────────────────────┤
+│  Homepages isolated inside top card  │
+└──────────────────┬───────────────────┘
+                   │
+         ┌─────────┴─────────┐
+         ▼                   ▼
+┌──────────────────┐   ┌──────────────────┐
+│  Click tab title │   │  Close card/tabs │
+│   to focus/jump  │   │ (swoosh+confetti)│
+└──────────────────┘   └──────────────────┘
 ```
 
 Everything runs inside the extension. No external server, no API calls, no data sent anywhere. Saved tabs are stored in `chrome.storage.local`.
@@ -79,9 +93,9 @@ Everything runs inside the extension. No external server, no API calls, no data 
 | What | How |
 |------|-----|
 | Extension | Chrome Manifest V3 |
-| Storage | chrome.storage.local |
-| Sound | Web Audio API (synthesized, no files) |
-| Animations | CSS transitions + JS confetti particles |
+| Storage | `chrome.storage.local` (100% Offline) |
+| Sound | Web Audio API (real-time synthesis, 0 files) |
+| Animations | Native CSS keyframes + physics-based confetti particles |
 
 ---
 
