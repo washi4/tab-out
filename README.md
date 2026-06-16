@@ -26,26 +26,15 @@ The agent will walk you through it. Takes about 1 minute.
 
 ## Features
 
-- **Tab Sleep & RAM Saver (极客标签页“内存拯救者”)** — Displays sleeping tabs with a cozy breathing `💤` badge. Adds a click-to-freeze snowflake `❄️` button on active chips and a "Freeze all tabs" button on group cards to discard tabs and free up hundreds of MBs of memory instantly. Accompanied by a cold, crystalline freeze synthesizer sweep.
-- **Workspace Session Manager (多命名工作区管理)** — Save selected open tabs into separate named workspaces (e.g. "AI Coding", "Travel Planning") using an elegant, grouped checkbox checklist popup modal. Swap or restore them easily from the Saved Workspaces sidebar pane, fully equipped with individual delete controls and tactile slide-in transitions.
-- **Premium Theme Switcher (双色主题极速切换)** — Toggle seamlessly between a warm, earthy "Sage Paper" light aesthetic and a glowing, sci-fi dark "Cyber Deck" mode. Complete with customized, theme-specific Web Audio synthesizer feedback and color-shifting confetti bursts!
-- **Vim-style Keyboard Maestro (全键盘极速微操)** — Navigate, open, freeze, and close tabs entirely from your keyboard without using a mouse. Focus/select tabs with `Tab`/`Shift-Tab`, Vim-keys (`j`/`k`), or Arrow keys (`ArrowUp`/`ArrowDown`). Press `Enter` to jump, `d` to close, `s` to save, and `f` to freeze, fully synced with the holographic target pointer.
-- **See all your tabs at a glance** on a clean grid, grouped by domain
-- **Homepages group** pulls Gmail inbox, X home, YouTube, LinkedIn, GitHub homepages into one card
-- **Satisfying Sound Synthesis & Confetti** plays swoosh/save/combo sounds synthesized directly via Web Audio API + premium confetti burst physics
-- **Combo Streak Multipliers** keeps you motivated to close clutter with responsive HUD combo streak multipliers that reward fast cleanup
-- **Cyberpunk HUD Holographic Cursor** sleek laser targets, interactive spring physics, and cursor ring shrink animations on hover and clicks
-- **Interactive Autocomplete Command Palette** press `/` or focus the top-right search box to expand it to `600px` and reveal a fully keyboard-navigable (`ArrowUp`/`ArrowDown`/`Enter`) autocomplete suggestion dropdown that lets you switch tabs instantly
-- **Reboot Protection Session Snapshot** one-click silent session backup that saves a non-destructive snapshot in Chrome local storage, showing a `Restore Session (N)` button to bring back all tabs instantly without stacking duplicates
-- **Duplicate detection** flags when you have the same page open twice, with one-click cleanup that dynamically updates all counts in real-time
-- **Click any tab to jump to it** across windows, no new tab opened
-- **Save for later** bookmark tabs to an active checklist before closing them
-- **Completed Archive Management** Collapsible history list supporting hover-to-reveal permanent delete buttons and a cascading domino slide-out **"Clear All"** button
-- **Localhost grouping** shows port numbers next to each tab so you can tell your vibe coding projects apart
-- **Expandable groups** show the first 8 tabs with a clickable "+N more"
-- **High-Fidelity Native Favicons** extracts direct tab favicon URLs from Chrome with third-party Google services as a backup, working seamlessly on intranet and localhost projects
-- **100% local** your data never leaves your machine
-- **Pure browser extension** no server, no Node.js, no npm, no setup beyond loading the extension
+- **Domain Grouping & Homepages** — See all your open tabs grouped by domain. Crucial landing pages (Gmail, X, YouTube, GitHub, etc.) are elegantly isolated at the top.
+- **Tab Sleep & RAM Saver (💤/❄️)** — Spot frozen tabs instantly by their breathing sleep badges. Unload resource-heavy pages with one click or via keyboard, accompanied by a crystalline freeze chime.
+- **Workspace Session Manager** — Group selected open tabs into distinct, named custom workspaces. Restore, manage, or delete them in the right sidebar.
+- **Keyboard Maestro (Vim Style)** — Mouse-free master navigation! Select tabs with `Tab`/`Shift-Tab`, Vim `j`/`k`, or Arrows, then hit `Enter` to focus, `d` to close, `s` to save, or `f` to freeze.
+- **Autocomplete Command Palette** — Press `/` to focus the search bar, filter open tabs instantly, and use keyboard arrows to jump to them.
+- **Theme Switcher** — Seamlessly toggle between "Sage Paper" (warm organic light mode) and "Cyber Deck" (matrix cyberpunk dark mode), complete with distinct synthesizer sweeps and matching confetti bursts.
+- **Local Profile Customizer** — Click your avatar in the left-top corner to instantly change your name and select from beautiful pixel emojis, featuring tactile Web Audio arpeggio feedback.
+- **Pixel Tab Pet Companion** — Mochi the Cat (Sage Green) or Byte the Robot (Cyber Deck) lives on your tab, reacting to your page cleanups, saves, and profile edits with cute animations and speech bubbles.
+- **100% Local & Private** — Pure extension structure with zero server setup or external trackers. Your data never leaves your machine.
 
 ---
 

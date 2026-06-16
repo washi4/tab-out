@@ -1446,7 +1446,14 @@ async function renderStaticDashboard() {
   // --- Header ---
   const greetingEl = document.getElementById('greeting');
   const dateEl     = document.getElementById('dateDisplay');
-  if (greetingEl) greetingEl.textContent = getGreeting();
+  if (greetingEl) {
+    const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+    if (isCyber) {
+      greetingEl.textContent = `System Online, ${profileName || 'Adventurer'}. ⚡`;
+    } else {
+      greetingEl.textContent = `${getGreeting()}, ${profileName || 'Adventurer'}!`;
+    }
+  }
   if (dateEl)     dateEl.textContent     = getDateDisplay();
 
   // --- Fetch tabs ---
@@ -1665,6 +1672,32 @@ document.addEventListener('click', async (e) => {
   if (saveWsBtn) {
     e.preventDefault();
     openWorkspaceModal();
+    return;
+  }
+
+  const kbShortcutsBtn = e.target.closest('#btnKeyboardShortcuts');
+  if (kbShortcutsBtn) {
+    e.preventDefault();
+    openKeyboardModal();
+    return;
+  }
+
+  const kbCloseBtn = e.target.closest('#btnKeyboardModalClose') || e.target.closest('#btnKeyboardModalCloseOk');
+  if (kbCloseBtn) {
+    e.preventDefault();
+    closeKeyboardModal();
+    return;
+  }
+
+  // Backdrop click to close modals
+  if (e.target.id === 'workspaceModalBackdrop') {
+    e.preventDefault();
+    closeWorkspaceModal();
+    return;
+  }
+  if (e.target.id === 'keyboardModalBackdrop') {
+    e.preventDefault();
+    closeKeyboardModal();
     return;
   }
 
@@ -1898,6 +1931,7 @@ document.addEventListener('click', async (e) => {
 
     playCloseSound();
     triggerCombo(1);
+    if (window.notifyPetAction) window.notifyPetAction('close');
 
     // Animate the chip row out (slides left to discard)
     const chip = actionEl.closest('.page-chip');
@@ -1963,6 +1997,7 @@ document.addEventListener('click', async (e) => {
         favIconUrl: match ? match.favIconUrl : ''
       });
       playSaveSound();
+      if (window.notifyPetAction) window.notifyPetAction('save');
     } catch (err) {
       console.error('[tab-out] Failed to save tab:', err);
       showToast('Failed to save tab');
@@ -2486,6 +2521,17 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
+  const keyboardModalBackdrop = document.getElementById('keyboardModalBackdrop');
+  const isKbModalOpen = keyboardModalBackdrop && keyboardModalBackdrop.classList.contains('visible');
+
+  if (isKbModalOpen) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeKeyboardModal();
+    }
+    return;
+  }
+
   const active = document.activeElement;
   const isInput = active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable;
   
@@ -2934,6 +2980,30 @@ function closeWorkspaceModal() {
 }
 
 /**
+ * openKeyboardModal()
+ *
+ * Opens the Keyboard Shortcuts modal popup.
+ */
+function openKeyboardModal() {
+  const backdrop = document.getElementById('keyboardModalBackdrop');
+  if (backdrop) {
+    backdrop.classList.add('visible');
+  }
+}
+
+/**
+ * closeKeyboardModal()
+ *
+ * Closes the Keyboard Shortcuts modal popup.
+ */
+function closeKeyboardModal() {
+  const backdrop = document.getElementById('keyboardModalBackdrop');
+  if (backdrop) {
+    backdrop.classList.remove('visible');
+  }
+}
+
+/**
  * selectWorkspaceAll()
  *
  * Checks all checkboxes in the Workspace modal tabs list.
@@ -3148,6 +3218,11 @@ function applyTheme(themeName) {
       btnSaveWorkspace.style.color = 'var(--accent-sage)';
     }
   }
+
+  // Update profile greeting on theme change
+  if (typeof updateProfileUI === 'function') {
+    updateProfileUI();
+  }
 }
 
 
@@ -3155,5 +3230,550 @@ function applyTheme(themeName) {
    INITIALIZE
    ---------------------------------------------------------------- */
 initThemeSystem();
+initProfileSystem();
 initTechCursor();
+initPixelPetSystem();
 renderDashboard();
+
+
+/* ================================================================
+   PIXEL TAB PET COMPCompanion SYSTEM Logic
+   ================================================================ */
+
+let petBubbleTimeout = null;
+
+/**
+ * playPetMeow()
+ * Synthesizes Mochi's cute soft "meow" sweep via Web Audio API.
+ */
+function playPetMeow() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // First pitch chirp
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'triangle';
+    osc1.frequency.setValueAtTime(750, audioCtx.currentTime);
+    osc1.frequency.exponentialRampToValueAtTime(1150, audioCtx.currentTime + 0.08);
+    
+    gain1.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+    
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start();
+    osc1.stop(audioCtx.currentTime + 0.12);
+
+    // Soft harmonized delay chirp for purr warmth
+    setTimeout(() => {
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1150, audioCtx.currentTime);
+      osc2.frequency.exponentialRampToValueAtTime(1250, audioCtx.currentTime + 0.06);
+      
+      gain2.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+      
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.start();
+      osc2.stop(audioCtx.currentTime + 0.08);
+    }, 40);
+
+  } catch (err) {
+    console.error('[tab-out] playPetMeow failed:', err);
+  }
+}
+
+/**
+ * playPetBeep()
+ * Synthesizes Byte's retro sci-fi 8-bit FM chime chord.
+ */
+function playPetBeep() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'square';
+    osc1.frequency.setValueAtTime(1046.50, audioCtx.currentTime); // C6
+    osc1.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.04); // E6
+    
+    gain1.gain.setValueAtTime(0.04, audioCtx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start();
+    osc1.stop(audioCtx.currentTime + 0.1);
+  } catch (err) {
+    console.error('[tab-out] playPetBeep failed:', err);
+  }
+}
+
+/**
+ * triggerPetVoice()
+ * Plays active sound feedback depending on currently active theme.
+ */
+function triggerPetVoice() {
+  const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+  if (isCyber) {
+    playPetBeep();
+  } else {
+    playPetMeow();
+  }
+}
+
+/**
+ * showPetBubble(text, durationMs)
+ * Springs up the speech bubble with customized geeky commentary.
+ */
+function showPetBubble(text, durationMs = 3500) {
+  const bubble = document.getElementById('petBubble');
+  const bubbleText = document.getElementById('petBubbleText');
+  if (!bubble || !bubbleText) return;
+
+  bubbleText.textContent = text;
+  bubble.classList.add('visible');
+
+  if (petBubbleTimeout) {
+    clearTimeout(petBubbleTimeout);
+  }
+
+  petBubbleTimeout = setTimeout(() => {
+    bubble.classList.remove('visible');
+  }, durationMs);
+}
+
+/**
+ * triggerPetAnimation(className)
+ * Triggers a CSS keyframe micro-interaction state and removes it.
+ */
+function triggerPetAnimation(className) {
+  const wrapper = document.getElementById('petSpriteWrapper');
+  if (!wrapper) return;
+
+  wrapper.classList.remove('pet-action-hop', 'pet-action-spin', 'pet-action-shake');
+  // Trigger DOM reflow to restart CSS keyframe transitions
+  void wrapper.offsetWidth;
+  wrapper.classList.add(className);
+}
+
+/**
+ * updatePetState(tabCount)
+ * Recalculates pet mood, wiggles elements, modifies expressions and sets localized quotes.
+ */
+function updatePetState(tabCount) {
+  const root = document.documentElement;
+  const isCyber = root.classList.contains('theme-cyberpunk');
+  
+  const spriteMochi = document.getElementById('spriteMochi');
+  const spriteByte = document.getElementById('spriteByte');
+  const mochiBlanket = document.getElementById('mochiBlanket');
+  const byteExpression = document.getElementById('byteExpression');
+  
+  if (!spriteMochi || !spriteByte) return;
+
+  // Toggle visible theme-dependent sprite
+  if (isCyber) {
+    spriteMochi.style.display = 'none';
+    spriteByte.style.display = 'flex';
+  } else {
+    spriteMochi.style.display = 'flex';
+    spriteByte.style.display = 'none';
+  }
+
+  // Manage expressions and sleeping layers
+  if (tabCount === 0) {
+    spriteMochi.classList.add('sleeping');
+    if (mochiBlanket) mochiBlanket.style.display = 'block';
+    if (byteExpression) byteExpression.textContent = '- _ -';
+  } else {
+    spriteMochi.classList.remove('sleeping');
+    if (mochiBlanket) mochiBlanket.style.display = 'none';
+    
+    if (tabCount <= 10) {
+      if (byteExpression) byteExpression.textContent = '^ _ ^';
+    } else if (tabCount <= 20) {
+      if (byteExpression) byteExpression.textContent = 'o _ o';
+    } else {
+      if (byteExpression) byteExpression.textContent = '✖ _ ✖';
+    }
+  }
+}
+
+/**
+ * getPetContextQuote(tabCount)
+ * Returns a randomized funny quote tailored to current layout load.
+ */
+function getPetContextQuote(tabCount) {
+  const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+  
+  if (tabCount === 0) {
+    const quotes = isCyber
+      ? ["Zen core ready.", "System cooling. Zero load.", "All threads clear.", "Standing by..."]
+      : ["呼... 暖呼呼喵... 💤", "数码界终归禅静 ✨", "猫饼已摊平...", "好舒服... 🍵"];
+    return quotes[Math.floor(Math.random() * quotes.length)];
+  }
+  
+  if (tabCount <= 10) {
+    const quotes = isCyber
+      ? ["Vibe: Ideal. Speed optimal.", "Threads optimized! 🌿", "Processor breathing easily.", "Ready to deploy."]
+      : ["一切井井有条喵！😻", "今天也是利落的一天！", "出来晒太阳啦~ 🌸", "心情极度舒适！"];
+    return quotes[Math.floor(Math.random() * quotes.length)];
+  }
+  
+  if (tabCount <= 20) {
+    const quotes = isCyber
+      ? ["Warning: RAM threshold.", "A bit crowded here...", "Active process buffer full.", "Load rising."]
+      : ["事情开始多起来了喵...", "我的小尾巴转不过来了", "你在默默憋什么大招？", "要加油了喵！⏰"];
+    return quotes[Math.floor(Math.random() * quotes.length)];
+  }
+  
+  const quotes = isCyber
+    ? ["🚨 CRITICAL OVERFLOW!", "SYSTEM STALL RISK!", "RAM BURST. DEPLOY SHIELD!", "ABORT ALL CLUTTER! ✖_✖"]
+    : ["救命！被网页淹没了！🙀", "RAM 要炸了喵！！🚨", "Too many tabs... 躲进箱子", "快把不要的冷冻掉喵！❄️"];
+  return quotes[Math.floor(Math.random() * quotes.length)];
+}
+
+/**
+ * pokePet()
+ * Poke trigger to play voice, bounce sprite and say localized quotes.
+ */
+function pokePet() {
+  triggerPetVoice();
+  
+  chrome.tabs.query({}, (tabs) => {
+    // Filter out Tab Out itself
+    const actualTabs = tabs.filter(t => t.url && !t.url.startsWith('chrome://') && !t.url.startsWith('edge://'));
+    const tabCount = actualTabs.length;
+    
+    // Choose hop or spin
+    const r = Math.random();
+    if (r < 0.6) {
+      triggerPetAnimation('pet-action-hop');
+    } else {
+      triggerPetAnimation('pet-action-spin');
+    }
+    
+    // Show randomized interactive comments
+    const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+    const pokes = isCyber
+      ? ["Interaction acknowledged. ^_^", "Core ping: 5ms", "Synthesizer online. Beep!", "Please don't tickle my antenna!"]
+      : ["喵呜~ 蹭蹭！💖", "摸我尾巴会漏电喵！⚡", "咕噜咕噜踩奶中...", "贴贴！(๑•́ ₃ •̀๑)"];
+    
+    showPetBubble(pokes[Math.floor(Math.random() * pokes.length)]);
+  });
+}
+
+/**
+ * initPixelPetSystem()
+ * Sets up listeners and sets initial state.
+ */
+function initPixelPetSystem() {
+  const petContainer = document.getElementById('tabPetContainer');
+  if (!petContainer) return;
+
+  // Add click trigger
+  petContainer.addEventListener('click', pokePet);
+
+  // Monitor tab count changes directly via background messages or simple checks
+  const checkState = () => {
+    chrome.tabs.query({}, (tabs) => {
+      const actualTabs = tabs.filter(t => t.url && !t.url.startsWith('chrome://') && !t.url.startsWith('edge://'));
+      updatePetState(actualTabs.length);
+    });
+  };
+
+  // Check state on init
+  checkState();
+
+  // Re-check on dynamic click updates or themes
+  document.getElementById('btnThemeToggle').addEventListener('click', () => {
+    setTimeout(checkState, 150);
+  });
+
+  // Greet user shortly on initial load
+  setTimeout(() => {
+    chrome.tabs.query({}, (tabs) => {
+      const actualTabs = tabs.filter(t => t.url && !t.url.startsWith('chrome://') && !t.url.startsWith('edge://'));
+      showPetBubble(getPetContextQuote(actualTabs.length));
+    });
+  }, 1000);
+}
+
+
+/* ================================================================
+   HOOK INTO DASHBOARD OPERATIONS TO EMIT COMPANION EFFECTS
+   ================================================================ */
+
+// Hook into single tab deletion
+const origCloseTab = window.closeTab; 
+// Check if closeTab is global or declared locally. Let's patch standard close and save actions directly.
+// To do this reliably, we can listen for clicks inside document for actions or just set intervals.
+// Let's hook our custom pet reaction events globally.
+function notifyPetAction(actionType) {
+  if (actionType === 'close') {
+    triggerPetAnimation('pet-action-hop');
+    showPetBubble(Math.random() < 0.5 ? "消灭一个！Snappy! 💨" : "啪！垃圾页面退散！🔥");
+  } else if (actionType === 'save') {
+    triggerPetAnimation('pet-action-spin');
+    showPetBubble(Math.random() < 0.5 ? "安全锁存！妥妥哒 💾" : "成功保存至百宝袋！✨");
+  } else if (actionType === 'freeze') {
+    triggerPetAnimation('pet-action-hop');
+    showPetBubble("呼... 瞬间省电 70%! ❄️");
+  } else if (actionType === 'profile') {
+    triggerPetAnimation('pet-action-spin');
+    const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+    const bubbleText = isCyber
+      ? `Profile updated. Welcome, ${profileName || 'Adventurer'}! 🦾`
+      : `你好，${profileName || 'Adventurer'}！真是个超棒的名字喵！😻`;
+    showPetBubble(bubbleText);
+  }
+}
+
+// Make notifyPetAction global so other click handlers can invoke it
+window.notifyPetAction = notifyPetAction;
+
+
+/* ================================================================
+   PROFILE SYSTEM STATE & EVENT BINDINGS
+   ================================================================ */
+
+// State for Profile
+let profileName = 'Adventurer';
+let profileEmoji = '🐱';
+
+/**
+ * initProfileSystem()
+ * Loads profile name and emoji from chrome.storage.local, applies it to DOM,
+ * and sets up all event listeners for popover trigger, save, cancel, and avatar grid clicks.
+ */
+async function initProfileSystem() {
+  try {
+    const data = await chrome.storage.local.get(['profileName', 'profileEmoji']);
+    if (data.profileName) profileName = data.profileName;
+    if (data.profileEmoji) profileEmoji = data.profileEmoji;
+  } catch (err) {
+    console.warn('[tab-out] Failed to load profile data:', err);
+  }
+
+  // Update UI with stored values
+  updateProfileUI();
+
+  // Set up trigger popover click listener
+  const trigger = document.getElementById('profileTrigger');
+  const popover = document.getElementById('profilePopover');
+  if (trigger && popover) {
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleProfilePopover();
+    });
+  }
+
+  // Set up avatar grid clicks
+  const grid = document.getElementById('profileAvatarGrid');
+  if (grid) {
+    grid.addEventListener('click', (e) => {
+      const item = e.target.closest('.avatar-grid-item');
+      if (item) {
+        // Toggle active class
+        grid.querySelectorAll('.avatar-grid-item').forEach(el => el.classList.remove('active'));
+        item.classList.add('active');
+        playTickSound(); // Play small sound on avatar selection
+      }
+    });
+  }
+
+  // Set up Cancel button
+  const cancelBtn = document.getElementById('btnProfileCancel');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeProfilePopover();
+    });
+  }
+
+  // Set up Save button
+  const saveBtn = document.getElementById('btnProfileSave');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await saveProfileData();
+    });
+  }
+
+  // Close popover when clicking outside
+  document.addEventListener('click', (e) => {
+    if (popover && popover.classList.contains('visible')) {
+      if (!e.target.closest('#profilePopover') && !e.target.closest('#profileTrigger')) {
+        closeProfilePopover();
+      }
+    }
+  });
+}
+
+function updateProfileUI() {
+  const avatarEmojiEl = document.getElementById('profileAvatarEmoji');
+  if (avatarEmojiEl) avatarEmojiEl.textContent = profileEmoji;
+
+  // Sync value into input
+  const nameInput = document.getElementById('profileNameInput');
+  if (nameInput) nameInput.value = profileName;
+
+  // Set active class in avatar grid
+  const grid = document.getElementById('profileAvatarGrid');
+  if (grid) {
+    grid.querySelectorAll('.avatar-grid-item').forEach(item => {
+      if (item.dataset.emoji === profileEmoji) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  }
+
+  // Update header text greeting
+  const greetingEl = document.getElementById('greeting');
+  if (greetingEl) {
+    const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+    if (isCyber) {
+      greetingEl.textContent = `System Online, ${profileName}. ⚡`;
+    } else {
+      greetingEl.textContent = `${getGreeting()}, ${profileName}!`;
+    }
+  }
+}
+
+function toggleProfilePopover() {
+  const popover = document.getElementById('profilePopover');
+  if (!popover) return;
+  const isVisible = popover.classList.contains('visible');
+  if (isVisible) {
+    closeProfilePopover();
+  } else {
+    // Populate latest values
+    const nameInput = document.getElementById('profileNameInput');
+    if (nameInput) nameInput.value = profileName;
+
+    // Reset grid highlight
+    const grid = document.getElementById('profileAvatarGrid');
+    if (grid) {
+      grid.querySelectorAll('.avatar-grid-item').forEach(item => {
+        if (item.dataset.emoji === profileEmoji) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+    }
+
+    popover.style.display = 'flex';
+    // Small delay to trigger CSS transition opacity + transform
+    setTimeout(() => {
+      popover.classList.add('visible');
+      if (nameInput) nameInput.focus();
+    }, 10);
+  }
+}
+
+function closeProfilePopover() {
+  const popover = document.getElementById('profilePopover');
+  if (popover) {
+    popover.classList.remove('visible');
+    setTimeout(() => {
+      if (!popover.classList.contains('visible')) {
+        popover.style.display = 'none';
+      }
+    }, 250); // Match transition duration
+  }
+}
+
+/**
+ * playProfileSaveSound()
+ * Synthesizes a delightful, ascending 8-bit scale sweep to celebrate profile save.
+ */
+function playProfileSaveSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
+    
+    // Play 3 rapid ascending notes
+    const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+    notes.forEach((freq, idx) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+      
+      gain.gain.setValueAtTime(0.06, now + idx * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.15);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 0.15);
+    });
+  } catch (err) {
+    console.warn('[tab-out] AudioContext failed to play save sound:', err);
+  }
+}
+
+async function saveProfileData() {
+  const nameInput = document.getElementById('profileNameInput');
+  const activeAvatar = document.querySelector('#profileAvatarGrid .avatar-grid-item.active');
+  if (!nameInput) return;
+
+  const newName = nameInput.value.trim() || 'Adventurer';
+  const newEmoji = activeAvatar ? activeAvatar.dataset.emoji : '🐱';
+
+  profileName = newName;
+  profileEmoji = newEmoji;
+
+  try {
+    await chrome.storage.local.set({ profileName, profileEmoji });
+    playProfileSaveSound();
+    
+    // Shoot confetti from profile trigger
+    const trigger = document.getElementById('profileTrigger');
+    if (trigger) {
+      const rect = trigger.getBoundingClientRect();
+      shootConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    }
+
+    closeProfilePopover();
+    updateProfileUI();
+    showToast('Profile updated!');
+
+    // Let the companion greet the user with their custom name!
+    if (window.notifyPetAction) {
+      window.notifyPetAction('profile');
+    }
+  } catch (err) {
+    console.error('[tab-out] Failed to save profile:', err);
+    showToast('Failed to save profile');
+  }
+}
+
+/**
+ * playTickSound()
+ * Simple short sine tick on avatar selection.
+ */
+function playTickSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.05);
+  } catch {}
+}
