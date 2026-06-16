@@ -23,11 +23,48 @@
        HEADER — greeting on the left, search bar on the right
        ================================================================ -->
   <header>
-    <div class="header-left">
-      <!-- "Good afternoon" — written by getGreeting() in app.js -->
-      <h1 id="greeting"></h1>
-      <!-- "Friday, April 4, 2026" — written by getDateDisplay() in app.js -->
-      <div class="date" id="dateDisplay"></div>
+    <div class="header-left" style="display: flex; align-items: center; gap: 16px; position: relative;">
+      <!-- Profile Trigger -->
+      <div class="profile-trigger" id="profileTrigger" title="Edit Profile & Avatar" style="cursor: pointer; position: relative;">
+        <div class="profile-avatar-container">
+          <span class="profile-avatar-emoji" id="profileAvatarEmoji">🐱</span>
+          <div class="profile-edit-badge">✏️</div>
+        </div>
+      </div>
+      
+      <div class="header-text">
+        <!-- "Good afternoon" — written by getGreeting() in app.js -->
+        <h1 id="greeting" style="margin: 0; font-size: 24px; font-weight: 500; font-family: 'Newsreader', serif; font-style: italic;"></h1>
+        <!-- "Friday, April 4, 2026" — written by getDateDisplay() in app.js -->
+        <div class="date" id="dateDisplay"></div>
+      </div>
+
+      <!-- Profile Popover Bubble -->
+      <div class="profile-popover" id="profilePopover">
+        <div class="popover-arrow"></div>
+        <div class="profile-popover-header">Customize Profile</div>
+        <div class="profile-popover-body">
+          <div class="input-group">
+            <label for="profileNameInput">Your Name</label>
+            <input type="text" id="profileNameInput" placeholder="Adventurer..." maxlength="15" autocomplete="off">
+          </div>
+          <div class="avatar-grid-label">Choose Avatar</div>
+          <div class="avatar-grid" id="profileAvatarGrid">
+            <span class="avatar-grid-item active" data-emoji="🐱">🐱</span>
+            <span class="avatar-grid-item" data-emoji="🤖">🤖</span>
+            <span class="avatar-grid-item" data-emoji="👾">👾</span>
+            <span class="avatar-grid-item" data-emoji="☕">☕</span>
+            <span class="avatar-grid-item" data-emoji="🦊">🦊</span>
+            <span class="avatar-grid-item" data-emoji="🐼">🐼</span>
+            <span class="avatar-grid-item" data-emoji="🚀">🚀</span>
+            <span class="avatar-grid-item" data-emoji="🎮">🎮</span>
+          </div>
+        </div>
+        <div class="profile-popover-footer">
+          <button class="tactile-btn secondary" id="btnProfileCancel" style="padding: 4px 10px; font-size: 11px;">Cancel</button>
+          <button class="tactile-btn" id="btnProfileSave" style="padding: 4px 12px; font-size: 11px;">Save Profile</button>
+        </div>
+      </div>
     </div>
 
     <div class="header-right">

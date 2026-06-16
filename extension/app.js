@@ -1446,7 +1446,14 @@ async function renderStaticDashboard() {
   // --- Header ---
   const greetingEl = document.getElementById('greeting');
   const dateEl     = document.getElementById('dateDisplay');
-  if (greetingEl) greetingEl.textContent = getGreeting();
+  if (greetingEl) {
+    const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+    if (isCyber) {
+      greetingEl.textContent = `System Online, ${profileName || 'Adventurer'}. ⚡`;
+    } else {
+      greetingEl.textContent = `${getGreeting()}, ${profileName || 'Adventurer'}!`;
+    }
+  }
   if (dateEl)     dateEl.textContent     = getDateDisplay();
 
   // --- Fetch tabs ---
@@ -3211,6 +3218,11 @@ function applyTheme(themeName) {
       btnSaveWorkspace.style.color = 'var(--accent-sage)';
     }
   }
+
+  // Update profile greeting on theme change
+  if (typeof updateProfileUI === 'function') {
+    updateProfileUI();
+  }
 }
 
 
@@ -3218,6 +3230,7 @@ function applyTheme(themeName) {
    INITIALIZE
    ---------------------------------------------------------------- */
 initThemeSystem();
+initProfileSystem();
 initTechCursor();
 initPixelPetSystem();
 renderDashboard();
@@ -3511,8 +3524,256 @@ function notifyPetAction(actionType) {
   } else if (actionType === 'freeze') {
     triggerPetAnimation('pet-action-hop');
     showPetBubble("呼... 瞬间省电 70%! ❄️");
+  } else if (actionType === 'profile') {
+    triggerPetAnimation('pet-action-spin');
+    const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+    const bubbleText = isCyber
+      ? `Profile updated. Welcome, ${profileName || 'Adventurer'}! 🦾`
+      : `你好，${profileName || 'Adventurer'}！真是个超棒的名字喵！😻`;
+    showPetBubble(bubbleText);
   }
 }
 
 // Make notifyPetAction global so other click handlers can invoke it
 window.notifyPetAction = notifyPetAction;
+
+
+/* ================================================================
+   PROFILE SYSTEM STATE & EVENT BINDINGS
+   ================================================================ */
+
+// State for Profile
+let profileName = 'Adventurer';
+let profileEmoji = '🐱';
+
+/**
+ * initProfileSystem()
+ * Loads profile name and emoji from chrome.storage.local, applies it to DOM,
+ * and sets up all event listeners for popover trigger, save, cancel, and avatar grid clicks.
+ */
+async function initProfileSystem() {
+  try {
+    const data = await chrome.storage.local.get(['profileName', 'profileEmoji']);
+    if (data.profileName) profileName = data.profileName;
+    if (data.profileEmoji) profileEmoji = data.profileEmoji;
+  } catch (err) {
+    console.warn('[tab-out] Failed to load profile data:', err);
+  }
+
+  // Update UI with stored values
+  updateProfileUI();
+
+  // Set up trigger popover click listener
+  const trigger = document.getElementById('profileTrigger');
+  const popover = document.getElementById('profilePopover');
+  if (trigger && popover) {
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleProfilePopover();
+    });
+  }
+
+  // Set up avatar grid clicks
+  const grid = document.getElementById('profileAvatarGrid');
+  if (grid) {
+    grid.addEventListener('click', (e) => {
+      const item = e.target.closest('.avatar-grid-item');
+      if (item) {
+        // Toggle active class
+        grid.querySelectorAll('.avatar-grid-item').forEach(el => el.classList.remove('active'));
+        item.classList.add('active');
+        playTickSound(); // Play small sound on avatar selection
+      }
+    });
+  }
+
+  // Set up Cancel button
+  const cancelBtn = document.getElementById('btnProfileCancel');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeProfilePopover();
+    });
+  }
+
+  // Set up Save button
+  const saveBtn = document.getElementById('btnProfileSave');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await saveProfileData();
+    });
+  }
+
+  // Close popover when clicking outside
+  document.addEventListener('click', (e) => {
+    if (popover && popover.classList.contains('visible')) {
+      if (!e.target.closest('#profilePopover') && !e.target.closest('#profileTrigger')) {
+        closeProfilePopover();
+      }
+    }
+  });
+}
+
+function updateProfileUI() {
+  const avatarEmojiEl = document.getElementById('profileAvatarEmoji');
+  if (avatarEmojiEl) avatarEmojiEl.textContent = profileEmoji;
+
+  // Sync value into input
+  const nameInput = document.getElementById('profileNameInput');
+  if (nameInput) nameInput.value = profileName;
+
+  // Set active class in avatar grid
+  const grid = document.getElementById('profileAvatarGrid');
+  if (grid) {
+    grid.querySelectorAll('.avatar-grid-item').forEach(item => {
+      if (item.dataset.emoji === profileEmoji) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  }
+
+  // Update header text greeting
+  const greetingEl = document.getElementById('greeting');
+  if (greetingEl) {
+    const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+    if (isCyber) {
+      greetingEl.textContent = `System Online, ${profileName}. ⚡`;
+    } else {
+      greetingEl.textContent = `${getGreeting()}, ${profileName}!`;
+    }
+  }
+}
+
+function toggleProfilePopover() {
+  const popover = document.getElementById('profilePopover');
+  if (!popover) return;
+  const isVisible = popover.classList.contains('visible');
+  if (isVisible) {
+    closeProfilePopover();
+  } else {
+    // Populate latest values
+    const nameInput = document.getElementById('profileNameInput');
+    if (nameInput) nameInput.value = profileName;
+
+    // Reset grid highlight
+    const grid = document.getElementById('profileAvatarGrid');
+    if (grid) {
+      grid.querySelectorAll('.avatar-grid-item').forEach(item => {
+        if (item.dataset.emoji === profileEmoji) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+    }
+
+    popover.style.display = 'flex';
+    // Small delay to trigger CSS transition opacity + transform
+    setTimeout(() => {
+      popover.classList.add('visible');
+      if (nameInput) nameInput.focus();
+    }, 10);
+  }
+}
+
+function closeProfilePopover() {
+  const popover = document.getElementById('profilePopover');
+  if (popover) {
+    popover.classList.remove('visible');
+    setTimeout(() => {
+      if (!popover.classList.contains('visible')) {
+        popover.style.display = 'none';
+      }
+    }, 250); // Match transition duration
+  }
+}
+
+/**
+ * playProfileSaveSound()
+ * Synthesizes a delightful, ascending 8-bit scale sweep to celebrate profile save.
+ */
+function playProfileSaveSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
+    
+    // Play 3 rapid ascending notes
+    const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+    notes.forEach((freq, idx) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+      
+      gain.gain.setValueAtTime(0.06, now + idx * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.15);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 0.15);
+    });
+  } catch (err) {
+    console.warn('[tab-out] AudioContext failed to play save sound:', err);
+  }
+}
+
+async function saveProfileData() {
+  const nameInput = document.getElementById('profileNameInput');
+  const activeAvatar = document.querySelector('#profileAvatarGrid .avatar-grid-item.active');
+  if (!nameInput) return;
+
+  const newName = nameInput.value.trim() || 'Adventurer';
+  const newEmoji = activeAvatar ? activeAvatar.dataset.emoji : '🐱';
+
+  profileName = newName;
+  profileEmoji = newEmoji;
+
+  try {
+    await chrome.storage.local.set({ profileName, profileEmoji });
+    playProfileSaveSound();
+    
+    // Shoot confetti from profile trigger
+    const trigger = document.getElementById('profileTrigger');
+    if (trigger) {
+      const rect = trigger.getBoundingClientRect();
+      shootConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    }
+
+    closeProfilePopover();
+    updateProfileUI();
+    showToast('Profile updated!');
+
+    // Let the companion greet the user with their custom name!
+    if (window.notifyPetAction) {
+      window.notifyPetAction('profile');
+    }
+  } catch (err) {
+    console.error('[tab-out] Failed to save profile:', err);
+    showToast('Failed to save profile');
+  }
+}
+
+/**
+ * playTickSound()
+ * Simple short sine tick on avatar selection.
+ */
+function playTickSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.05);
+  } catch {}
+}

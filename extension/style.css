@@ -2928,4 +2928,237 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
 }
 
 
+/* ================================================================
+   PROFILE CUSTOMIZATION WITH MICRO-INTERACTIONS
+   ================================================================ */
+
+.profile-trigger {
+  width: 52px;
+  height: 52px;
+  background: var(--card-bg);
+  border: 1.5px solid var(--warm-gray);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s, box-shadow 0.25s;
+}
+
+.profile-trigger:hover {
+  transform: scale(1.08) rotate(-3deg);
+  border-color: var(--accent-sage);
+  box-shadow: 0 6px 16px rgba(90, 122, 98, 0.15);
+}
+
+.profile-avatar-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-avatar-emoji {
+  font-size: 26px;
+  user-select: none;
+}
+
+.profile-edit-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 18px;
+  height: 18px;
+  background: var(--accent-sage);
+  color: white;
+  border-radius: 50%;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--card-bg);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+
+.profile-trigger:hover .profile-edit-badge {
+  transform: scale(1.2) rotate(15deg);
+}
+
+/* Popover Bubble Card */
+.profile-popover {
+  display: none;
+  position: absolute;
+  top: 68px;
+  left: 0;
+  z-index: 10000;
+  width: 290px;
+  background: var(--card-bg);
+  border: 1.5px solid var(--warm-gray);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transform: scale(0.9) translateY(-10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s;
+}
+
+.profile-popover.visible {
+  display: flex;
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.popover-arrow {
+  position: absolute;
+  top: -8px;
+  left: 18px;
+  width: 14px;
+  height: 14px;
+  background: var(--card-bg);
+  border-left: 1.5px solid var(--warm-gray);
+  border-top: 1.5px solid var(--warm-gray);
+  transform: rotate(45deg);
+}
+
+.profile-popover-header {
+  font-family: 'Newsreader', serif;
+  font-size: 18px;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--ink);
+  border-bottom: 1px solid var(--warm-gray);
+  padding-bottom: 8px;
+}
+
+.profile-popover-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-popover-body .input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-popover-body label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+
+.profile-popover-body input {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--warm-gray);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.profile-popover-body input:focus {
+  border-color: var(--accent-sage);
+  box-shadow: 0 0 0 3px rgba(90, 122, 98, 0.1);
+}
+
+.avatar-grid-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.avatar-grid-item {
+  font-size: 24px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1.5px solid var(--warm-gray);
+  background: var(--bg);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
+}
+
+.avatar-grid-item:hover {
+  transform: translateY(-2px) scale(1.05);
+  border-color: var(--accent-sage);
+}
+
+.avatar-grid-item.active {
+  background: rgba(90, 122, 98, 0.08);
+  border-color: var(--accent-sage);
+  transform: scale(1.05);
+  box-shadow: 0 3px 8px rgba(90, 122, 98, 0.1);
+}
+
+.profile-popover-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* ==================== CYBERPUNK CUSTOMIZATION TWEAKS ==================== */
+.theme-cyberpunk .profile-trigger {
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+}
+.theme-cyberpunk .profile-trigger:hover {
+  border-color: #00f0ff;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+}
+.theme-cyberpunk .profile-edit-badge {
+  background: #00f0ff;
+  color: #111;
+  border-color: var(--card-bg);
+}
+.theme-cyberpunk .popover-arrow {
+  background: var(--card-bg);
+}
+.theme-cyberpunk .profile-popover-header {
+  color: #00f0ff;
+  font-family: monospace;
+  font-weight: bold;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.theme-cyberpunk .profile-popover-body input:focus {
+  border-color: #00f0ff;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+}
+.theme-cyberpunk .avatar-grid-item:hover {
+  border-color: #00f0ff;
+}
+.theme-cyberpunk .avatar-grid-item.active {
+  background: rgba(0, 240, 255, 0.08);
+  border-color: #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
+
 
