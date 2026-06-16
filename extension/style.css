@@ -1326,6 +1326,48 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   flex-shrink: 0;
 }
 
+/* Dismiss (X) button for archive */
+.archive-dismiss {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px;
+  opacity: 0; /* invisible until parent hovered */
+  transition: opacity 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), color 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform;
+}
+
+.archive-dismiss svg {
+  width: 12px;
+  height: 12px;
+}
+
+.archive-item:hover .archive-dismiss {
+  opacity: 0.5;
+}
+
+.archive-item:hover .archive-dismiss:hover {
+  opacity: 1;
+  color: var(--status-abandoned);
+  transform: scale(1.15);
+}
+
+.archive-dismiss:active {
+  transform: scale(0.85);
+}
+
+/* Slide-out animation for archive items being removed */
+.archive-item.removing {
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
 /* ================================================================
    COMBO STREAK BADGE
    ================================================================ */
