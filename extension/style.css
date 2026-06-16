@@ -69,7 +69,8 @@ header {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .session-actions {
