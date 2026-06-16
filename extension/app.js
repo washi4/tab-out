@@ -3119,14 +3119,12 @@ async function initThemeSystem() {
  */
 function applyTheme(themeName) {
   const root = document.documentElement;
-  const btnText = document.getElementById('themeToggleText');
   
   const iconMoon = document.querySelector('.theme-icon-moon');
   const iconSun = document.querySelector('.theme-icon-sun');
 
   if (themeName === 'cyberpunk-blue') {
     root.classList.add('theme-cyberpunk');
-    if (btnText) btnText.textContent = 'Sage Paper';
     if (iconMoon) iconMoon.style.display = 'none';
     if (iconSun) iconSun.style.display = 'inline-block';
     
@@ -3139,7 +3137,6 @@ function applyTheme(themeName) {
     }
   } else {
     root.classList.remove('theme-cyberpunk');
-    if (btnText) btnText.textContent = 'Cyber Deck';
     if (iconMoon) iconMoon.style.display = 'inline-block';
     if (iconSun) iconSun.style.display = 'none';
     
