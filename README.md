@@ -26,12 +26,18 @@ The agent will walk you through it. Takes about 1 minute.
 
 - **See all your tabs at a glance** on a clean grid, grouped by domain
 - **Homepages group** pulls Gmail inbox, X home, YouTube, LinkedIn, GitHub homepages into one card
-- **Close tabs with style** with swoosh sound + confetti burst
-- **Duplicate detection** flags when you have the same page open twice, with one-click cleanup
+- **Satisfying Sound Synthesis & Confetti** plays swoosh/save/combo sounds synthesized directly via Web Audio API + premium confetti burst physics
+- **Combo Streak Multipliers** keeps you motivated to close clutter with responsive HUD combo streak multipliers that reward fast cleanup
+- **Cyberpunk HUD Holographic Cursor** sleek laser targets, interactive spring physics, and cursor ring shrink animations on hover and clicks
+- **Interactive Autocomplete Command Palette** press `/` or focus the top-right search box to expand it to `600px` and reveal a fully keyboard-navigable (`ArrowUp`/`ArrowDown`/`Enter`) autocomplete suggestion dropdown that lets you switch tabs instantly
+- **Reboot Protection Session Snapshot** one-click silent session backup that saves a non-destructive snapshot in Chrome local storage, showing a `Restore Session (N)` button to bring back all tabs instantly without stacking duplicates
+- **Duplicate detection** flags when you have the same page open twice, with one-click cleanup that dynamically updates all counts in real-time
 - **Click any tab to jump to it** across windows, no new tab opened
-- **Save for later** bookmark tabs to a checklist before closing them
+- **Save for later** bookmark tabs to an active checklist before closing them
+- **Completed Archive Management** Collapsible history list supporting hover-to-reveal permanent delete buttons and a cascading domino slide-out **"Clear All"** button
 - **Localhost grouping** shows port numbers next to each tab so you can tell your vibe coding projects apart
 - **Expandable groups** show the first 8 tabs with a clickable "+N more"
+- **High-Fidelity Native Favicons** extracts direct tab favicon URLs from Chrome with third-party Google services as a backup, working seamlessly on intranet and localhost projects
 - **100% local** your data never leaves your machine
 - **Pure browser extension** no server, no Node.js, no npm, no setup beyond loading the extension
 
