@@ -37,7 +37,13 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span>Save Session</span>
+          <span>Quick Save</span>
+        </button>
+        <button class="tactile-btn" id="btnSaveWorkspace" title="Save current tabs as a named workspace!" style="background: rgba(90, 122, 98, 0.08); border-color: rgba(90, 122, 98, 0.15); color: var(--accent-sage);">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          <span>Save Workspace</span>
         </button>
         <button class="tactile-btn secondary" id="btnRestoreSession" title="Restore all tabs from your last saved session" style="display: none;">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
@@ -60,6 +66,16 @@
         </div>
         <div class="search-dropdown" id="searchDropdown" style="display:none"></div>
       </div>
+
+      <!-- THEME TOGGLE — only icon, placed after search -->
+      <button class="tactile-btn theme-toggle-btn" id="btnThemeToggle" title="Toggle cyber deck matrix / sage paper aesthetic theme">
+        <svg class="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+        </svg>
+        <svg class="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="display: none;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m0 13.5V21m11.25-9h-2.25M3 12h2.25m15.364-6.364l-1.591 1.591M6.343 17.657l-1.591 1.591m12.728 0l-1.591-1.591M6.343 6.343L4.752 4.752M12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" />
+        </svg>
+      </button>
     </div>
   </header>
 
@@ -118,6 +134,17 @@
         Nothing saved. Living in the moment.
       </div>
 
+      <!-- WORKSPACES SECTION -->
+      <div class="section-header" style="margin-top: 24px;">
+        <h2>Saved Workspaces</h2>
+        <div class="section-line"></div>
+        <div class="section-count" id="workspacesCount">0</div>
+      </div>
+      <div class="workspaces-list" id="workspacesList"></div>
+      <div class="workspaces-empty" id="workspacesEmpty">
+        No workspaces saved yet. Click "Save Workspace" to create one!
+      </div>
+
       <!-- Archive section — collapsed by default -->
       <div class="deferred-archive" id="deferredArchive" style="display:none">
         <div class="archive-header" style="display: flex; align-items: center; justify-content: space-between;">
@@ -150,11 +177,51 @@
       </div>
     </div>
     <div class="last-refresh">
-      <span style="color: var(--muted); font-size: 11px;">Tab Out · Chrome &amp; Edge</span>
+      <a href="https://github.com/washi4/tab-out" target="_blank" class="footer-link">Tab Out · Wayne Shi ↗</a>
     </div>
   </footer>
 
 </div><!-- end .container -->
+
+<!-- ================================================================
+     WORKSPACE TAB SELECTION MODAL
+     ================================================================ -->
+<div class="workspace-modal-backdrop" id="workspaceModalBackdrop">
+  <div class="workspace-modal" id="workspaceModal">
+    <div class="workspace-modal-header">
+      <h3>Save Named Workspace</h3>
+      <button class="modal-close-btn" id="btnWorkspaceModalClose">&times;</button>
+    </div>
+    <div class="workspace-modal-body">
+      <div class="input-group">
+        <label for="workspaceNameInput">Workspace Name</label>
+        <input type="text" id="workspaceNameInput" placeholder="e.g. AI Coding, Travel Planning..." autocomplete="off">
+      </div>
+      <div class="tabs-select-section">
+        <div class="tabs-select-header">
+          <label>Select tabs to include:</label>
+          <div class="bulk-toggles">
+            <button class="text-toggle-btn" id="btnSelectAllTabs">Select All</button>
+            <span class="divider">|</span>
+            <button class="text-toggle-btn" id="btnSelectNoneTabs">Deselect All</button>
+          </div>
+        </div>
+        <div class="modal-tabs-list" id="workspaceModalTabsList">
+          <!-- Dynamic tab items grouped by domain, with checkboxes -->
+        </div>
+      </div>
+    </div>
+    <div class="workspace-modal-footer">
+      <button class="tactile-btn secondary" id="btnWorkspaceModalCancel">Cancel</button>
+      <button class="tactile-btn" id="btnWorkspaceModalSave">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width: 14px; height: 14px; margin-right: 6px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+        <span>Save Workspace</span>
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ================================================================
      TOAST — floats above everything, used for action confirmations

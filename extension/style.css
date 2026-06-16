@@ -69,7 +69,8 @@ header {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .session-actions {
@@ -143,6 +144,71 @@ header {
 .search-container:focus-within {
   width: 600px; /* expands beautifully when focused for max readability! */
   z-index: 4000;
+}
+
+/* ================================================================
+   DYNAMIC HEADER BUTTON COLLAPSE (MICRO-INTERACTION)
+   ================================================================ */
+
+/* Prepare the tactile buttons for smooth size transitions */
+.session-actions .tactile-btn {
+  transition: width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+              padding 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+              gap 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+              background 0.3s, border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 38px; /* Perfectly match search input and theme toggle height */
+  overflow: hidden;
+}
+
+/* Ensure child text span transitions its max-width and opacity smoothly */
+.session-actions .tactile-btn span {
+  display: inline-block;
+  max-width: 150px; /* Safe upper limit for button text */
+  opacity: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+              opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
+              margin-left 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* When the search bar expands (focused), collapse the header buttons into pristine icons */
+.header-right:has(.search-container:focus-within) .session-actions .tactile-btn {
+  width: 38px;
+  padding: 0;
+  gap: 0;
+  box-shadow: none; /* remove deep shadow when in compact icon state to stay clean */
+}
+
+.header-right:has(.search-container:focus-within) .session-actions .tactile-btn span {
+  max-width: 0;
+  opacity: 0;
+  margin: 0;
+}
+
+/* Restoring hover and active physical pop states for the collapsed 38px squircles */
+.header-right:has(.search-container:focus-within) .session-actions .tactile-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(200, 113, 58, 0.25);
+}
+
+.header-right:has(.search-container:focus-within) .session-actions .tactile-btn.secondary:hover {
+  box-shadow: 0 6px 14px rgba(26, 22, 19, 0.08);
+}
+
+/* Restoring glowing active states in Cyberpunk mode when focused/collapsed */
+.theme-cyberpunk .header-right:has(.search-container:focus-within) .session-actions .tactile-btn:hover {
+  box-shadow: 0 0 15px rgba(255, 0, 127, 0.3) !important;
+}
+
+.theme-cyberpunk .header-right:has(.search-container:focus-within) .session-actions #btnSaveWorkspace:hover {
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3) !important;
+}
+
+.theme-cyberpunk .header-right:has(.search-container:focus-within) .session-actions #btnRestoreSession:hover {
+  box-shadow: 0 0 15px rgba(200, 113, 58, 0.3) !important;
 }
 
 .search-input-wrapper {
@@ -771,6 +837,19 @@ footer {
 .last-refresh {
   font-size: 11px;
   color: var(--muted);
+}
+
+.footer-link {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.25);
+  transition: all 0.2s ease;
+  padding-bottom: 1px;
+}
+
+.footer-link:hover {
+  color: var(--text-light);
+  border-bottom: 1px solid var(--text-light);
 }
 
 .refresh-btn {
@@ -1803,4 +1882,672 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   padding: 16px;
   text-align: center;
 }
+
+/* ============================================================
+   TAB SLEEP & WORKSPACE SAVER & KEYBOARD MAESTRO STYLES
+   ============================================================ */
+:root {
+  --accent-blue: #407fa0;
+}
+
+/* Sleep badge & discarded chips */
+.chip-sleep-badge {
+  font-size: 11px;
+  margin-right: 4px;
+  animation: sleep-breathing 3s ease-in-out infinite;
+}
+
+.page-chip.chip-discarded {
+  opacity: 0.65;
+  border-color: rgba(64, 127, 160, 0.2);
+  background: rgba(64, 127, 160, 0.03);
+}
+
+.page-chip.chip-discarded:hover {
+  opacity: 1;
+  border-color: rgba(64, 127, 160, 0.5);
+  background: rgba(64, 127, 160, 0.08);
+}
+
+@keyframes sleep-breathing {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+.chip-action.chip-freeze {
+  color: var(--accent-blue);
+}
+.chip-action.chip-freeze:hover {
+  background: rgba(64, 127, 160, 0.12) !important;
+  color: #a0d2ff;
+}
+
+.freeze-tabs {
+  background: rgba(64, 127, 160, 0.06) !important;
+  border-color: rgba(64, 127, 160, 0.15) !important;
+  color: var(--accent-blue) !important;
+}
+
+.freeze-tabs:hover {
+  background: rgba(64, 127, 160, 0.12) !important;
+  color: #2b6180 !important;
+}
+
+/* Workspaces Section */
+.workspaces-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.workspace-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--warm-gray);
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.workspace-item:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-sage);
+  box-shadow: 0 4px 12px var(--shadow);
+}
+
+/* ============================================================
+   WORKSPACE ACCORDION PREVIEW STYLES
+   ============================================================ */
+.workspace-wrapper {
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border: 1px solid var(--warm-gray);
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  overflow: hidden;
+}
+
+.workspace-wrapper:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-sage);
+  box-shadow: 0 4px 12px var(--shadow);
+}
+
+.workspace-wrapper .workspace-item {
+  border: none;
+  border-radius: 0;
+}
+
+.workspace-wrapper .workspace-item:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.workspace-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-toggle-arrow {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.workspace-toggle-arrow.expanded {
+  transform: rotate(90deg);
+  color: var(--accent-sage);
+}
+
+.workspace-preview-list {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  background: rgba(154, 145, 138, 0.02);
+  border-top: 1px dashed transparent;
+  transition: max-height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.25s ease, border-color 0.3s;
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-preview-list.expanded {
+  max-height: 300px;
+  overflow-y: auto;
+  opacity: 1;
+  padding: 8px 12px 12px 12px;
+  border-top-color: rgba(154, 145, 138, 0.12);
+}
+
+.workspace-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+  text-decoration: none;
+  color: var(--muted);
+}
+
+.workspace-preview-item:hover {
+  background: rgba(154, 145, 138, 0.06);
+  color: var(--ink);
+  transform: translateX(2px);
+}
+
+.workspace-preview-favicon {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.workspace-preview-title {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+
+.workspace-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workspace-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.workspace-meta {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.workspace-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.ws-action {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ws-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ws-action.ws-restore:hover {
+  background: rgba(90, 122, 98, 0.08);
+  color: var(--accent-sage);
+  border-color: rgba(90, 122, 98, 0.15);
+}
+
+.ws-action.ws-delete:hover {
+  background: rgba(179, 90, 90, 0.08);
+  color: var(--accent-rose);
+  border-color: rgba(179, 90, 90, 0.15);
+}
+
+.workspaces-empty {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  padding: 20px 0;
+  border: 1px dashed var(--warm-gray);
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+/* Keyboard selection glow */
+.page-chip.chip-keyboard-selected {
+  outline: 2px solid var(--accent-sage);
+  outline-offset: 1px;
+  box-shadow: 0 0 10px rgba(90, 122, 98, 0.4);
+  background: rgba(90, 122, 98, 0.05);
+}
+
+/* ============================================================
+   WORKSPACE TAB SELECTION MODAL STYLES
+   ============================================================ */
+.workspace-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(18, 16, 15, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.workspace-modal-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.workspace-modal {
+  background: var(--card-bg);
+  border: 1px solid var(--warm-gray);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 520px;
+  max-height: 90%;
+  padding: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transform: scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.workspace-modal-backdrop.visible .workspace-modal {
+  transform: scale(1);
+}
+
+.workspace-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.workspace-modal-header h3 {
+  margin: 0;
+  font-family: 'Newsreader', serif;
+  font-size: 20px;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.modal-close-btn:hover {
+  color: var(--ink);
+}
+
+.workspace-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0; /* allows child lists to scroll */
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-group label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+#workspaceNameInput {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--warm-gray);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+#workspaceNameInput:focus {
+  border-color: var(--accent-sage);
+  box-shadow: 0 0 8px rgba(90, 122, 98, 0.2);
+}
+
+.tabs-select-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.tabs-select-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.tabs-select-header label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.bulk-toggles {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.text-toggle-btn {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.text-toggle-btn:hover {
+  color: var(--accent-sage);
+}
+
+.bulk-toggles .divider {
+  font-size: 10px;
+  color: var(--warm-gray);
+}
+
+.modal-tabs-list {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--warm-gray);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(154, 145, 138, 0.03);
+}
+
+.modal-group-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--accent-amber);
+  margin-top: 12px;
+  margin-bottom: 6px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid rgba(154, 145, 138, 0.08);
+}
+
+.modal-group-title:first-child {
+  margin-top: 2px;
+}
+
+.modal-tab-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.modal-tab-item:hover {
+  background: rgba(154, 145, 138, 0.08);
+}
+
+.modal-tab-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--warm-gray);
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  position: relative;
+}
+
+.modal-tab-checkbox:hover {
+  border-color: var(--accent-sage);
+  transform: scale(1.1);
+}
+
+.modal-tab-checkbox:checked {
+  background: var(--accent-sage);
+  border-color: var(--accent-sage);
+}
+
+.modal-tab-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--card-bg);
+}
+
+.modal-tab-favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.modal-tab-title {
+  font-size: 12px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.workspace-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid var(--warm-gray);
+  padding-top: 16px;
+}
+
+/* ============================================================
+   CYBERPUNK MATRIX / GLOWING NEON BLUE THEME OVERRIDES
+   ============================================================ */
+:root.theme-cyberpunk {
+  --ink: #e0e6ed;             /* Crisp Ice Silver text */
+  --paper: #060913;           /* Ultra-deep obsidian virtual dark */
+  --warm-gray: #151c2a;       /* Matte dark graphite for borders */
+  --muted: #6b7a90;           /* Tactical steel blue-gray */
+  --accent-amber: #ff007f;    /* Glowing Neon Magenta/Pink */
+  --accent-sage: #00f0ff;     /* Glowing Cyber Laser Cyan */
+  --accent-slate: #8b5cf6;    /* Glowing Tech Purple */
+  --accent-rose: #ff3366;     /* Electric Pink-Red */
+  --status-active: #39ff14;   /* Acid UFO Green */
+  --status-cooling: #ffd700;  /* Cyberpunk Gold */
+  --status-abandoned: #ff3366;/* Electric Pink-Red */
+  --card-bg: #0d1321;         /* Sleek carbon deck dark card background */
+  --shadow: rgba(0, 240, 255, 0.15); /* Laser cyan glowing shadow */
+}
+
+/* 1. Cyber background with high-tech laser grid + noise analogue grain */
+.theme-cyberpunk body::before {
+  background-image: 
+    linear-gradient(rgba(0, 240, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.015) 1px, transparent 1px),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+  background-size: 32px 32px, 32px 32px, auto;
+}
+
+/* 2. Overriding hardcoded colors for buttons and search focus */
+.theme-cyberpunk .tactile-btn {
+  box-shadow: 0 4px 12px rgba(255, 0, 127, 0.2);
+  border-color: rgba(255, 0, 127, 0.3);
+}
+.theme-cyberpunk .tactile-btn:hover {
+  background: #e60072;
+  box-shadow: 0 8px 24px rgba(255, 0, 127, 0.4);
+}
+.theme-cyberpunk .tactile-btn:active {
+  box-shadow: 0 2px 6px rgba(255, 0, 127, 0.2);
+}
+
+/* Custom styles for workspace secondary buttons in cyberpunk */
+.theme-cyberpunk #btnSaveWorkspace {
+  background: rgba(0, 240, 255, 0.08) !important;
+  border-color: rgba(0, 240, 255, 0.2) !important;
+  color: var(--accent-sage) !important;
+}
+.theme-cyberpunk #btnSaveWorkspace:hover {
+  background: rgba(0, 240, 255, 0.16) !important;
+  border-color: var(--accent-sage) !important;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3) !important;
+}
+
+.theme-cyberpunk .tactile-btn.secondary {
+  border-color: var(--accent-sage);
+}
+.theme-cyberpunk .tactile-btn.secondary:hover {
+  background: rgba(0, 240, 255, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 240, 255, 0.2);
+}
+
+/* Search bar focus in cyberpunk (uses neon blue/cyan) */
+.theme-cyberpunk .search-input-wrapper:focus-within {
+  border-color: var(--accent-sage);
+  box-shadow: 0 8px 20px rgba(0, 240, 255, 0.2), 0 0 0 4px rgba(0, 240, 255, 0.12);
+}
+
+/* 3. Cyberpunk neon glow on cards when hovered */
+.theme-cyberpunk .mission-card:hover {
+  border-color: var(--accent-sage);
+  box-shadow: 0 8px 24px rgba(0, 240, 255, 0.2);
+}
+
+/* 4. Scrollbar customization for cyberpunk mode */
+.theme-cyberpunk ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.theme-cyberpunk ::-webkit-scrollbar-track {
+  background: var(--paper);
+}
+.theme-cyberpunk ::-webkit-scrollbar-thumb {
+  background: var(--warm-gray);
+  border-radius: 4px;
+  border: 2px solid var(--paper);
+}
+.theme-cyberpunk ::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-sage);
+  box-shadow: 0 0 8px var(--accent-sage);
+}
+
+/* 5. Custom cyberpunk selection color */
+.theme-cyberpunk ::selection {
+  background: rgba(0, 240, 255, 0.3);
+  color: #ffffff;
+}
+
+/* 6. Rotate icon transition */
+#btnThemeToggle svg {
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#btnThemeToggle:hover svg {
+  transform: rotate(45deg) scale(1.1);
+}
+
+/* Premium theme toggle squircle icon button */
+.theme-toggle-btn {
+  padding: 0 !important; /* clear padding to allow exact centering of the SVG inside the square */
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 12px !important; /* same cohesive squircle radius as other buttons & search bar */
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  align-self: center !important; /* force perfect flex centering */
+  vertical-align: middle !important;
+  margin: 0 !important; /* clear any browser-default button margins */
+  flex-shrink: 0;
+  background: rgba(90, 107, 122, 0.08) !important;
+  border: 1px solid rgba(90, 107, 122, 0.15) !important;
+  color: var(--accent-slate) !important;
+  box-shadow: none !important;
+}
+
+.theme-toggle-btn svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(90, 107, 122, 0.16) !important;
+  border-color: var(--accent-slate) !important;
+  box-shadow: 0 0 12px rgba(90, 107, 122, 0.25) !important;
+  transform: translateY(-2px);
+}
+
+.theme-toggle-btn:active {
+  transform: translateY(0);
+}
+
+/* Theme Toggle inside Cyberpunk */
+.theme-cyberpunk .theme-toggle-btn {
+  background: rgba(0, 240, 255, 0.08) !important;
+  border-color: rgba(0, 240, 255, 0.15) !important;
+  color: var(--accent-sage) !important;
+}
+
+.theme-cyberpunk .theme-toggle-btn:hover {
+  background: rgba(0, 240, 255, 0.16) !important;
+  border-color: var(--accent-sage) !important;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3) !important;
+}
+
+
 

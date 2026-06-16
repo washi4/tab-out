@@ -29,6 +29,9 @@ let openTabs = [];
 // Track tab IDs that we close programmatically so onRemoved doesn't trigger full render and disrupt animations
 const programmaticallyClosedTabIds = new Set();
 
+// Track expanded workspace IDs to preserve accordion fold states between static dashboard renders
+const expandedWorkspaceIds = new Set();
+
 /**
  * removeTabsSafely(ids)
  *
@@ -66,6 +69,7 @@ async function fetchOpenTabs() {
       windowId: t.windowId,
       active:   t.active,
       favIconUrl: t.favIconUrl,
+      discarded: t.discarded,
       // Flag Tab Out's own pages so we can detect duplicate new tabs
       isTabOut:
         t.url === newtabUrl ||
@@ -527,6 +531,44 @@ function playChimeSound() {
 }
 
 /**
+ * playFreezeSound()
+ *
+ * Plays a cold, crystalline chime sound when tabs are frozen.
+ * Built entirely with the Web Audio API — no sound files needed.
+ */
+function playFreezeSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+
+    // High crystalline sine wave tones that sweep up and fade with a bell ring
+    const freqs = [880.00, 1174.66, 1567.98, 2093.00]; // A5, D6, G6, C7
+    const duration = 0.6;
+
+    freqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'triangle'; // triangle is softer, like ice/bell
+      osc.frequency.setValueAtTime(freq, t);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.05, t + 0.15);
+
+      const noteDelay = idx * 0.05;
+
+      gain.gain.setValueAtTime(0.001, t + noteDelay);
+      gain.gain.linearRampToValueAtTime(0.03, t + noteDelay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + noteDelay + duration);
+
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t + noteDelay);
+      osc.stop(t + noteDelay + duration + 0.1);
+    });
+  } catch (err) {
+    console.error('[tab-out] playFreezeSound error:', err);
+  }
+}
+
+/**
  * playCloseSound()
  *
  * Plays a clean "swoosh" sound when tabs are closed.
@@ -574,14 +616,112 @@ function playCloseSound() {
 }
 
 /**
+ * playSageThemeSound()
+ *
+ * Plays a warm, organic acoustic chime when switching to the Sage Green theme.
+ * Built entirely with the Web Audio API.
+ */
+function playSageThemeSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+
+    const notes = [220.00, 277.18, 329.63, 440.00]; // A3, C#4, E4, A4 (A Major)
+    const duration = 0.8;
+
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+
+      const delay = idx * 0.08; // slow arpeggio/strum
+
+      gain.gain.setValueAtTime(0.001, t + delay);
+      gain.gain.linearRampToValueAtTime(0.06, t + delay + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + delay + duration);
+
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t + delay);
+      osc.stop(t + delay + duration + 0.1);
+    });
+  } catch (err) {
+    console.error('[tab-out] playSageThemeSound error:', err);
+  }
+}
+
+/**
+ * playCyberThemeSound()
+ *
+ * Plays a high-tech digital sweep with low-to-high riser pitch-bend and high resonance.
+ * Built entirely with the Web Audio API.
+ */
+function playCyberThemeSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+
+    // 1. Digital Synth Sweep
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(100, t);
+    osc.frequency.exponentialRampToValueAtTime(600, t + 0.35);
+
+    filter.type = 'lowpass';
+    filter.Q.value = 5.0; // resonant
+    filter.frequency.setValueAtTime(300, t);
+    filter.frequency.exponentialRampToValueAtTime(3500, t + 0.35);
+
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.07, t + 0.05); // fast attack
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4); // fade out
+
+    osc.connect(filter).connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.45);
+
+    // 2. High digital beep on complete
+    const beep = ctx.createOscillator();
+    const beepGain = ctx.createGain();
+
+    beep.type = 'sine';
+    beep.frequency.setValueAtTime(1760, t + 0.25); // A6
+
+    beepGain.gain.setValueAtTime(0.001, t + 0.25);
+    beepGain.gain.linearRampToValueAtTime(0.04, t + 0.28);
+    beepGain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+
+    beep.connect(beepGain).connect(ctx.destination);
+    beep.start(t + 0.25);
+    beep.stop(t + 0.55);
+  } catch (err) {
+    console.error('[tab-out] playCyberThemeSound error:', err);
+  }
+}
+
+/**
  * shootConfetti(x, y)
  *
  * Shoots a burst of colorful confetti particles from the given screen
  * coordinates (typically the center of a card being closed).
  * Pure CSS + JS, no libraries.
+ * Adapts colors dynamically to the active theme!
  */
 function shootConfetti(x, y) {
-  const colors = [
+  const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+  const colors = isCyber ? [
+    '#00f0ff', // cyan
+    '#05f9ff', // light cyan
+    '#ff007f', // magenta
+    '#ff5ebd', // light pink
+    '#8b5cf6', // purple
+    '#a78bfa', // light purple
+    '#39ff14', // neon green
+  ] : [
     '#c8713a', // amber
     '#e8a070', // amber light
     '#5a7a62', // sage
@@ -1009,7 +1149,10 @@ function buildOverflowChips(hiddenTabs, urlCounts = {}) {
     const label    = cleanTitle(smartTitle(stripTitleNoise(tab.title || ''), tab.url), '');
     const count    = urlCounts[tab.url] || 1;
     const dupeTag  = count > 1 ? ` <span class="chip-dupe-badge">(${count}x)</span>` : '';
-    const chipClass = count > 1 ? ' chip-has-dupes' : '';
+    const isDiscarded = tab.discarded;
+    const discardedClass = isDiscarded ? ' chip-discarded' : '';
+    const sleepIcon = isDiscarded ? `<span class="chip-sleep-badge" title="Tab is sleeping (saves memory)">💤</span>` : '';
+    const chipClass = (count > 1 ? ' chip-has-dupes' : '') + discardedClass;
     const safeUrl   = (tab.url || '').replace(/"/g, '&quot;');
     const safeTitle = label.replace(/"/g, '&quot;');
     let domain = '';
@@ -1018,8 +1161,14 @@ function buildOverflowChips(hiddenTabs, urlCounts = {}) {
     const searchText = `${label} ${tab.url}`.toLowerCase().replace(/"/g, '&quot;');
     return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" data-search-text="${searchText}" title="${safeTitle}">
       ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="">` : ''}
+      ${sleepIcon}
       <span class="chip-text">${label}</span>${dupeTag}
       <div class="chip-actions">
+        ${!isDiscarded ? `
+        <button class="chip-action chip-freeze" data-action="freeze-single-tab" data-tab-id="${tab.id}" title="Freeze this tab (Saves memory!)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m0-18l-3 3m3-3l3 3m-3 15l-3-3m3 3l3-3M3 12h18M3 12l3-3m-3 3l3 3m15-3l-3-3m3 3l-3 3" /></svg>
+        </button>
+        ` : ''}
         <button class="chip-action chip-save" data-action="defer-single-tab" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" title="Save for later">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" /></svg>
         </button>
@@ -1091,7 +1240,10 @@ function renderDomainCard(group) {
     } catch {}
     const count    = urlCounts[tab.url];
     const dupeTag  = count > 1 ? ` <span class="chip-dupe-badge">(${count}x)</span>` : '';
-    const chipClass = count > 1 ? ' chip-has-dupes' : '';
+    const isDiscarded = tab.discarded;
+    const discardedClass = isDiscarded ? ' chip-discarded' : '';
+    const sleepIcon = isDiscarded ? `<span class="chip-sleep-badge" title="Tab is sleeping (saves memory)">💤</span>` : '';
+    const chipClass = (count > 1 ? ' chip-has-dupes' : '') + discardedClass;
     const safeUrl   = (tab.url || '').replace(/"/g, '&quot;');
     const safeTitle = label.replace(/"/g, '&quot;');
     let domain = '';
@@ -1100,8 +1252,14 @@ function renderDomainCard(group) {
     const searchText = `${label} ${tab.url}`.toLowerCase().replace(/"/g, '&quot;');
     return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" data-search-text="${searchText}" title="${safeTitle}">
       ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="">` : ''}
+      ${sleepIcon}
       <span class="chip-text">${label}</span>${dupeTag}
       <div class="chip-actions">
+        ${!isDiscarded ? `
+        <button class="chip-action chip-freeze" data-action="freeze-single-tab" data-tab-id="${tab.id}" title="Freeze this tab (Saves memory!)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m0-18l-3 3m3-3l3 3m-3 15l-3-3m3 3l3-3M3 12h18M3 12l3-3m-3 3l3 3m15-3l-3-3m3 3l-3 3" /></svg>
+        </button>
+        ` : ''}
         <button class="chip-action chip-save" data-action="defer-single-tab" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" title="Save for later">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" /></svg>
         </button>
@@ -1117,6 +1275,15 @@ function renderDomainCard(group) {
       ${ICONS.close}
       Close all ${tabCount} tab${tabCount !== 1 ? 's' : ''}
     </button>`;
+
+  const hasActiveTabs = tabs.some(t => !t.discarded);
+  if (hasActiveTabs) {
+    actionsHtml += `
+      <button class="action-btn freeze-tabs" data-action="freeze-domain-tabs" data-domain-id="${stableId}">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 12px; height: 12px; margin-right: 4px; display: inline-block; vertical-align: middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m0-18l-3 3m3-3l3 3m-3 15l-3-3m3 3l3-3M3 12h18M3 12l3-3m-3 3l3 3m15-3l-3-3m3 3l-3 3" /></svg>
+        Freeze all ${tabCount} tabs
+      </button>`;
+  }
 
   if (hasDupes) {
     const dupeUrlsEncoded = dupeUrls.map(([url]) => encodeURIComponent(url)).join(',');
@@ -1275,6 +1442,7 @@ function renderArchiveItem(item) {
  * 6. Renders the "Saved for Later" checklist
  */
 async function renderStaticDashboard() {
+  selectedChipIndex = -1;
   // --- Header ---
   const greetingEl = document.getElementById('greeting');
   const dateEl     = document.getElementById('dateDisplay');
@@ -1414,13 +1582,16 @@ async function renderStaticDashboard() {
 
   // --- Footer stats ---
   const statTabs = document.getElementById('statTabs');
-  if (statTabs) statTabs.textContent = openTabs.length;
+  if (statTabs) statTabs.textContent = getRealTabs().length;
 
   // --- Check for duplicate Tab Out tabs ---
   checkTabOutDupes();
 
   // --- Render "Saved for Later" column ---
   await renderDeferredColumn();
+
+  // --- Render Saved Workspaces ---
+  await renderWorkspaces();
 
   // --- Re-apply search filter if active ---
   const searchInput = document.getElementById('globalSearch');
@@ -1466,6 +1637,65 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  const themeBtn = e.target.closest('#btnThemeToggle');
+  if (themeBtn) {
+    e.preventDefault();
+    const root = document.documentElement;
+    const isCyber = root.classList.contains('theme-cyberpunk');
+    const newTheme = isCyber ? 'sage-green' : 'cyberpunk-blue';
+
+    // Persist theme to storage
+    await chrome.storage.local.set({ theme: newTheme });
+    applyTheme(newTheme);
+
+    // Play satisfying theme audio feedback
+    if (newTheme === 'cyberpunk-blue') {
+      playCyberThemeSound();
+    } else {
+      playSageThemeSound();
+    }
+
+    // Shoot a gorgeous dynamic celebratory confetti burst from the toggle button!
+    const rect = themeBtn.getBoundingClientRect();
+    shootConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return;
+  }
+
+  const saveWsBtn = e.target.closest('#btnSaveWorkspace');
+  if (saveWsBtn) {
+    e.preventDefault();
+    openWorkspaceModal();
+    return;
+  }
+
+  const modalCloseBtn = e.target.closest('#btnWorkspaceModalClose') || e.target.closest('#btnWorkspaceModalCancel');
+  if (modalCloseBtn) {
+    e.preventDefault();
+    closeWorkspaceModal();
+    return;
+  }
+
+  const selectAllBtn = e.target.closest('#btnSelectAllTabs');
+  if (selectAllBtn) {
+    e.preventDefault();
+    selectWorkspaceAll();
+    return;
+  }
+
+  const selectNoneBtn = e.target.closest('#btnSelectNoneTabs');
+  if (selectNoneBtn) {
+    e.preventDefault();
+    selectWorkspaceNone();
+    return;
+  }
+
+  const modalSaveBtn = e.target.closest('#btnWorkspaceModalSave');
+  if (modalSaveBtn) {
+    e.preventDefault();
+    await handleWorkspaceSave();
+    return;
+  }
+
   // Walk up the DOM to find the nearest element with data-action
   const actionEl = e.target.closest('[data-action]');
   if (!actionEl) return;
@@ -1504,6 +1734,153 @@ document.addEventListener('click', async (e) => {
   if (action === 'focus-tab') {
     const tabUrl = actionEl.dataset.tabUrl;
     if (tabUrl) await focusTab(tabUrl);
+    return;
+  }
+
+  // ---- Freeze/Sleep a single tab ----
+  if (action === 'freeze-single-tab') {
+    e.stopPropagation();
+    const tabIdStr = actionEl.dataset.tabId;
+    if (!tabIdStr) return;
+    const tabId = parseInt(tabIdStr, 10);
+    
+    try {
+      await chrome.tabs.discard(tabId);
+      playFreezeSound();
+      showToast('Tab frozen successfully (saves RAM) ❄️');
+      await fetchOpenTabs();
+      await renderStaticDashboard();
+    } catch (err) {
+      console.error('[tab-out] Failed to freeze tab:', err);
+    }
+    return;
+  }
+
+  // ---- Freeze/Sleep all tabs in a domain group ----
+  if (action === 'freeze-domain-tabs') {
+    e.stopPropagation();
+    const domainId = actionEl.dataset.domainId;
+    if (!domainId) return;
+
+    const groupCard = actionEl.closest('.mission-card');
+    if (!groupCard) return;
+    const freezeBtns = groupCard.querySelectorAll('[data-action="freeze-single-tab"]');
+    
+    let count = 0;
+    for (const btn of freezeBtns) {
+      const tabIdStr = btn.dataset.tabId;
+      if (tabIdStr) {
+        const tabId = parseInt(tabIdStr, 10);
+        try {
+          await chrome.tabs.discard(tabId);
+          count++;
+        } catch {}
+      }
+    }
+
+    if (count > 0) {
+      playFreezeSound();
+      showToast(`Frozen ${count} tab${count !== 1 ? 's' : ''} in group ❄️`);
+      await fetchOpenTabs();
+      await renderStaticDashboard();
+    }
+    return;
+  }
+
+  // ---- Toggle named workspace fold ----
+  if (action === 'toggle-workspace-fold') {
+    e.stopPropagation();
+    // Support clicking both headers and lists via data-ws-id
+    const wsId = actionEl.dataset.wsId;
+    if (!wsId) return;
+
+    const arrow = document.querySelector(`.workspace-toggle-arrow[data-ws-id="${wsId}"]`);
+    const list = document.querySelector(`.workspace-preview-list[data-ws-id="${wsId}"]`);
+
+    if (expandedWorkspaceIds.has(wsId)) {
+      expandedWorkspaceIds.delete(wsId);
+      if (arrow) arrow.classList.remove('expanded');
+      if (list) list.classList.remove('expanded');
+    } else {
+      expandedWorkspaceIds.add(wsId);
+      if (arrow) arrow.classList.add('expanded');
+      if (list) list.classList.add('expanded');
+    }
+    return;
+  }
+
+  // ---- Restore single tab from workspace ----
+  if (action === 'restore-single-ws-tab') {
+    e.stopPropagation();
+    const url = actionEl.dataset.url;
+    if (!url) return;
+
+    playChimeSound();
+    const currentlyOpenUrls = new Set(openTabs.map(t => t.url));
+    if (currentlyOpenUrls.has(url)) {
+      showToast('This tab is already open!');
+      // Find the tab and focus it
+      const openTab = openTabs.find(t => t.url === url);
+      if (openTab) {
+        chrome.tabs.update(openTab.id, { active: true });
+        chrome.windows.update(openTab.windowId, { focused: true });
+      }
+    } else {
+      try {
+        await chrome.tabs.create({ url, active: false });
+        showToast('Opened tab in background');
+        await fetchOpenTabs();
+        await renderStaticDashboard();
+      } catch (err) {
+        console.error('[tab-out] Failed to open workspace tab:', err);
+      }
+    }
+    return;
+  }
+
+  // ---- Restore a named workspace ----
+  if (action === 'restore-workspace') {
+    e.stopPropagation();
+    const wsId = actionEl.dataset.wsId;
+    if (!wsId) return;
+
+    const { workspaces = [] } = await chrome.storage.local.get('workspaces');
+    const ws = workspaces.find(w => w.id === wsId);
+    if (!ws) return;
+
+    playChimeSound();
+    const currentlyOpenUrls = new Set(openTabs.map(t => t.url));
+    const urlsToRestore = ws.urls.filter(url => !currentlyOpenUrls.has(url));
+
+    if (urlsToRestore.length > 0) {
+      try {
+        await Promise.all(urlsToRestore.map(url => chrome.tabs.create({ url, active: false })));
+      } catch (err) {
+        console.error('[tab-out] Failed to restore workspace tabs:', err);
+      }
+    }
+
+    showToast(`Restored workspace "${ws.name}" (${urlsToRestore.length} tabs)!`);
+    await fetchOpenTabs();
+    await renderStaticDashboard();
+    return;
+  }
+
+  // ---- Delete a named workspace ----
+  if (action === 'delete-workspace') {
+    e.stopPropagation();
+    const wsId = actionEl.dataset.wsId;
+    if (!wsId) return;
+
+    if (!confirm("Are you sure you want to delete this workspace?")) return;
+
+    const { workspaces = [] } = await chrome.storage.local.get('workspaces');
+    const updated = workspaces.filter(w => w.id !== wsId);
+    await chrome.storage.local.set({ workspaces: updated });
+
+    playCloseSound();
+    showToast("Workspace deleted");
+    await renderWorkspaces();
     return;
   }
 
@@ -1563,7 +1940,7 @@ document.addEventListener('click', async (e) => {
 
     // Update footer
     const statTabs = document.getElementById('statTabs');
-    if (statTabs) statTabs.textContent = openTabs.length;
+    if (statTabs) statTabs.textContent = getRealTabs().length;
 
     showToast('Tab closed');
     return;
@@ -1637,7 +2014,7 @@ document.addEventListener('click', async (e) => {
 
     // Update footer
     const statTabs = document.getElementById('statTabs');
-    if (statTabs) statTabs.textContent = openTabs.length;
+    if (statTabs) statTabs.textContent = getRealTabs().length;
 
     showToast('Saved for later');
     await renderDeferredColumn();
@@ -1764,7 +2141,7 @@ document.addEventListener('click', async (e) => {
     showToast(`Closed ${urls.length} tab${urls.length !== 1 ? 's' : ''} from ${groupLabel}`);
 
     const statTabs = document.getElementById('statTabs');
-    if (statTabs) statTabs.textContent = openTabs.length;
+    if (statTabs) statTabs.textContent = getRealTabs().length;
     return;
   }
 
@@ -2005,6 +2382,9 @@ function escapeRegExp(string) {
 let activeDropdownIndex = -1;
 let dropdownMatches = [];
 
+// State for global dashboard keyboard navigation (Vim / Tab selection)
+let selectedChipIndex = -1;
+
 /**
  * updateSearchDropdown(query)
  *
@@ -2095,6 +2475,17 @@ document.addEventListener('input', (e) => {
 
 // ---- Key bindings for quick search and escape ----
 document.addEventListener('keydown', (e) => {
+  const workspaceModalBackdrop = document.getElementById('workspaceModalBackdrop');
+  const isModalOpen = workspaceModalBackdrop && workspaceModalBackdrop.classList.contains('visible');
+  
+  if (isModalOpen) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeWorkspaceModal();
+    }
+    return;
+  }
+
   const active = document.activeElement;
   const isInput = active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable;
   
@@ -2138,6 +2529,70 @@ document.addEventListener('keydown', (e) => {
         filterTabs('');
         updateSearchDropdown('');
         active.blur();
+      }
+    }
+  }
+
+  // ---- Global Dashboard Keyboard Navigation (Vim-style & Tab navigation) ----
+  if (!isInput) {
+    const visibleChips = Array.from(document.querySelectorAll('.page-chip')).filter(chip => {
+      const parentOverflow = chip.closest('.page-chips-overflow');
+      if (parentOverflow && parentOverflow.style.display === 'none') return false;
+      const card = chip.closest('.mission-card');
+      if (card && card.style.display === 'none') return false;
+      return chip.style.display !== 'none';
+    });
+
+    if (visibleChips.length > 0) {
+      let changed = false;
+
+      if (e.key === 'Tab' || e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          selectedChipIndex = (selectedChipIndex - 1 + visibleChips.length) % visibleChips.length;
+        } else {
+          selectedChipIndex = (selectedChipIndex + 1) % visibleChips.length;
+        }
+        changed = true;
+      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedChipIndex = (selectedChipIndex - 1 + visibleChips.length) % visibleChips.length;
+        changed = true;
+      } else if (e.key === 'Escape') {
+        selectedChipIndex = -1;
+        changed = true;
+      } else if (e.key === 'Enter' && selectedChipIndex >= 0 && visibleChips[selectedChipIndex]) {
+        e.preventDefault();
+        const url = visibleChips[selectedChipIndex].dataset.tabUrl;
+        if (url) focusTab(url);
+      } else if (e.key === 'd' && selectedChipIndex >= 0 && visibleChips[selectedChipIndex]) {
+        e.preventDefault();
+        const closeBtn = visibleChips[selectedChipIndex].querySelector('.chip-close');
+        if (closeBtn) {
+          closeBtn.click();
+          setTimeout(() => { selectedChipIndex = Math.min(selectedChipIndex, visibleChips.length - 2); }, 300);
+        }
+      } else if (e.key === 's' && selectedChipIndex >= 0 && visibleChips[selectedChipIndex]) {
+        e.preventDefault();
+        const saveBtn = visibleChips[selectedChipIndex].querySelector('.chip-save');
+        if (saveBtn) {
+          saveBtn.click();
+          setTimeout(() => { selectedChipIndex = Math.min(selectedChipIndex, visibleChips.length - 2); }, 300);
+        }
+      } else if (e.key === 'f' && selectedChipIndex >= 0 && visibleChips[selectedChipIndex]) {
+        e.preventDefault();
+        const freezeBtn = visibleChips[selectedChipIndex].querySelector('.chip-freeze');
+        if (freezeBtn) {
+          freezeBtn.click();
+        }
+      }
+
+      if (changed) {
+        document.querySelectorAll('.page-chip').forEach(c => c.classList.remove('chip-keyboard-selected'));
+        if (selectedChipIndex >= 0 && visibleChips[selectedChipIndex]) {
+          visibleChips[selectedChipIndex].classList.add('chip-keyboard-selected');
+          visibleChips[selectedChipIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
       }
     }
   }
@@ -2383,9 +2838,322 @@ async function updateSessionButtonsVisibility() {
   }
 }
 
+/**
+ * escapeHtml(str)
+ *
+ * Escapes HTML characters to prevent XSS.
+ */
+function escapeHtml(str) {
+  return (str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * openWorkspaceModal()
+ *
+ * Populates and opens the Workspace selection modal popup.
+ */
+function openWorkspaceModal() {
+  const backdrop = document.getElementById('workspaceModalBackdrop');
+  const nameInput = document.getElementById('workspaceNameInput');
+  const tabsList = document.getElementById('workspaceModalTabsList');
+  if (!backdrop || !nameInput || !tabsList) return;
+
+  // Clear name and set placeholder/default value
+  nameInput.value = "Workspace " + new Date().toLocaleDateString();
+
+  // Populate tabs list with checkboxes grouped by domain
+  const realTabs = getRealTabs();
+  if (realTabs.length === 0) {
+    showToast('No open tabs to save!');
+    return;
+  }
+
+  const groupMap = {};
+  for (const tab of realTabs) {
+    let domain = 'Other';
+    try {
+      if (tab.url && tab.url.startsWith('file://')) {
+        domain = 'Local Files';
+      } else if (tab.url) {
+        const hostname = new URL(tab.url).hostname;
+        domain = hostname.replace(/^www\./, '') || 'Other';
+      }
+    } catch {
+      domain = 'Other';
+    }
+    if (!groupMap[domain]) groupMap[domain] = [];
+    groupMap[domain].push(tab);
+  }
+
+  let html = '';
+  const sortedDomains = Object.keys(groupMap).sort();
+  for (const domain of sortedDomains) {
+    html += `<div class="modal-group-title">${escapeHtml(domain)}</div>`;
+    const tabs = groupMap[domain];
+    for (const tab of tabs) {
+      const escapedTitle = escapeHtml(tab.title || tab.url || 'Untitled');
+      const escapedUrl = escapeHtml(tab.url || '');
+      const faviconUrl = tab.favIconUrl || 'icons/icon16.png';
+      html += `
+        <label class="modal-tab-item">
+          <input type="checkbox" class="modal-tab-checkbox" data-tab-id="${tab.id}" data-url="${escapedUrl}" checked>
+          <img class="modal-tab-favicon" src="${faviconUrl}" onerror="this.src='icons/icon16.png';">
+          <span class="modal-tab-title" title="${escapedTitle}">${escapedTitle}</span>
+        </label>
+      `;
+    }
+  }
+
+  tabsList.innerHTML = html;
+
+  // Show modal with animation
+  backdrop.classList.add('visible');
+
+  // Focus the name input and select its text
+  setTimeout(() => {
+    nameInput.focus();
+    nameInput.select();
+  }, 100);
+}
+
+/**
+ * closeWorkspaceModal()
+ *
+ * Closes the Workspace selection modal popup.
+ */
+function closeWorkspaceModal() {
+  const backdrop = document.getElementById('workspaceModalBackdrop');
+  if (backdrop) {
+    backdrop.classList.remove('visible');
+  }
+}
+
+/**
+ * selectWorkspaceAll()
+ *
+ * Checks all checkboxes in the Workspace modal tabs list.
+ */
+function selectWorkspaceAll() {
+  const checkboxes = document.querySelectorAll('.modal-tab-checkbox');
+  checkboxes.forEach(cb => cb.checked = true);
+}
+
+/**
+ * selectWorkspaceNone()
+ *
+ * Unchecks all checkboxes in the Workspace modal tabs list.
+ */
+function selectWorkspaceNone() {
+  const checkboxes = document.querySelectorAll('.modal-tab-checkbox');
+  checkboxes.forEach(cb => cb.checked = false);
+}
+
+/**
+ * handleWorkspaceSave()
+ *
+ * Validates form inputs and saves the custom Workspace.
+ */
+async function handleWorkspaceSave() {
+  const nameInput = document.getElementById('workspaceNameInput');
+  if (!nameInput) return;
+
+  const name = nameInput.value.trim();
+  if (!name) {
+    showToast('Please enter a workspace name!');
+    nameInput.focus();
+    return;
+  }
+
+  const checkedBoxes = document.querySelectorAll('.modal-tab-checkbox:checked');
+  if (checkedBoxes.length === 0) {
+    showToast('Please select at least one tab!');
+    return;
+  }
+
+  const selectedTabs = Array.from(checkedBoxes).map(cb => {
+    // Attempt to locate matching tab in current openTabs to capture its correct title and favicon
+    const tabId = parseInt(cb.dataset.tabId, 10);
+    const matchingTab = openTabs.find(t => t.id === tabId);
+    return {
+      title: matchingTab ? matchingTab.title : cb.dataset.url,
+      url: cb.dataset.url,
+      favIconUrl: matchingTab ? matchingTab.favIconUrl : ''
+    };
+  });
+
+  await saveWorkspace(name, selectedTabs);
+  closeWorkspaceModal();
+}
+
+/**
+ * saveWorkspace(name, selectedTabs)
+ *
+ * Saves selected tabs (with title, url, favicon) as a named workspace in local storage.
+ */
+async function saveWorkspace(name, selectedTabs) {
+  if (!selectedTabs || selectedTabs.length === 0) {
+    showToast('No tabs selected to save!');
+    return;
+  }
+
+  const { workspaces = [] } = await chrome.storage.local.get('workspaces');
+
+  // Schema: id, name, createdAt, tabs: [{title, url, favIconUrl}], urls (for backwards compatibility)
+  const newWorkspace = {
+    id: 'ws-' + Date.now(),
+    name: name,
+    tabs: selectedTabs,
+    urls: selectedTabs.map(t => t.url), // maintain old flat array for fully backward-compatible loading
+    createdAt: Date.now()
+  };
+
+  workspaces.push(newWorkspace);
+  await chrome.storage.local.set({ workspaces });
+
+  playSaveSound();
+  showToast(`Saved workspace "${name}" with ${selectedTabs.length} tab${selectedTabs.length !== 1 ? 's' : ''}! 📁`);
+  await renderStaticDashboard();
+}
+
+/**
+ * renderWorkspaces()
+ *
+ * Populates the Workspaces list in the sidebar with active saved workspaces.
+ */
+async function renderWorkspaces() {
+  const workspacesContainer = document.getElementById('workspacesList');
+  const workspacesEmpty = document.getElementById('workspacesEmpty');
+  const countEl = document.getElementById('workspacesCount');
+  if (!workspacesContainer) return;
+
+  const { workspaces = [] } = await chrome.storage.local.get('workspaces');
+  if (countEl) countEl.textContent = workspaces.length;
+
+  if (workspaces.length === 0) {
+    workspacesContainer.innerHTML = '';
+    if (workspacesEmpty) workspacesEmpty.style.display = 'block';
+    return;
+  }
+
+  if (workspacesEmpty) workspacesEmpty.style.display = 'none';
+  workspacesContainer.innerHTML = workspaces.map(ws => {
+    const isExpanded = expandedWorkspaceIds.has(ws.id);
+    const arrowClass = isExpanded ? 'workspace-toggle-arrow expanded' : 'workspace-toggle-arrow';
+    const listClass = isExpanded ? 'workspace-preview-list expanded' : 'workspace-preview-list';
+
+    // Backwards-compatible fallback mapping for workspaces created before rich tab schema metadata
+    const tabList = ws.tabs || (ws.urls || []).map(url => {
+      let label = url;
+      try {
+        const parsed = new URL(url);
+        label = parsed.hostname.replace(/^www\./, '') + parsed.pathname;
+        if (label.length > 35) label = label.substring(0, 35) + '...';
+      } catch {}
+      return { title: label, url: url, favIconUrl: '' };
+    });
+
+    const previewItemsHtml = tabList.map(tab => {
+      const displayTitle = escapeHtml(tab.title || tab.url);
+      const displayFavicon = tab.favIconUrl || 'icons/icon16.png';
+      return `
+        <div class="workspace-preview-item" data-action="restore-single-ws-tab" data-url="${escapeHtml(tab.url)}" title="Click to open this specific tab: ${displayTitle}">
+          <img class="workspace-preview-favicon" src="${displayFavicon}" onerror="this.src='icons/icon16.png';">
+          <span class="workspace-preview-title">${displayTitle}</span>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="workspace-wrapper">
+        <div class="workspace-item clickable" data-action="toggle-workspace-fold" data-ws-id="${ws.id}">
+          <div class="workspace-header-left">
+            <svg class="${arrowClass}" data-ws-id="${ws.id}" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+            <div class="workspace-info">
+              <span class="workspace-name">${escapeHtml(ws.name)}</span>
+              <span class="workspace-meta">${tabList.length} tabs &nbsp;&middot;&nbsp; ${new Date(ws.createdAt).toLocaleDateString()}</span>
+            </div>
+          </div>
+          <div class="workspace-actions">
+            <button class="ws-action ws-restore" data-action="restore-workspace" data-ws-id="${ws.id}" title="Restore Workspace">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
+            </button>
+            <button class="ws-action ws-delete" data-action="delete-workspace" data-ws-id="${ws.id}" title="Delete Workspace">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.34 9m-4.78 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.108 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+            </button>
+          </div>
+        </div>
+        <div class="workspace-preview-list" data-ws-id="${ws.id}">
+          ${previewItemsHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * initThemeSystem()
+ *
+ * Loads the active theme from chrome.storage.local and applies it to the document element.
+ */
+async function initThemeSystem() {
+  try {
+    const { theme = 'sage-green' } = await chrome.storage.local.get('theme');
+    applyTheme(theme);
+  } catch (err) {
+    console.error('[tab-out] initThemeSystem error:', err);
+    applyTheme('sage-green'); // fallback
+  }
+}
+
+/**
+ * applyTheme(themeName)
+ *
+ * Appends or removes theme classes and updates button UI elements.
+ */
+function applyTheme(themeName) {
+  const root = document.documentElement;
+  
+  const iconMoon = document.querySelector('.theme-icon-moon');
+  const iconSun = document.querySelector('.theme-icon-sun');
+
+  if (themeName === 'cyberpunk-blue') {
+    root.classList.add('theme-cyberpunk');
+    if (iconMoon) iconMoon.style.display = 'none';
+    if (iconSun) iconSun.style.display = 'inline-block';
+    
+    // Also style Save Workspace button to match Cyberpunk Cyan
+    const btnSaveWorkspace = document.getElementById('btnSaveWorkspace');
+    if (btnSaveWorkspace) {
+      btnSaveWorkspace.style.background = 'rgba(0, 240, 255, 0.08)';
+      btnSaveWorkspace.style.borderColor = 'rgba(0, 240, 255, 0.15)';
+      btnSaveWorkspace.style.color = 'var(--accent-sage)';
+    }
+  } else {
+    root.classList.remove('theme-cyberpunk');
+    if (iconMoon) iconMoon.style.display = 'inline-block';
+    if (iconSun) iconSun.style.display = 'none';
+    
+    // Style Save Workspace button back to Sage Green
+    const btnSaveWorkspace = document.getElementById('btnSaveWorkspace');
+    if (btnSaveWorkspace) {
+      btnSaveWorkspace.style.background = 'rgba(90, 122, 98, 0.08)';
+      btnSaveWorkspace.style.borderColor = 'rgba(90, 122, 98, 0.15)';
+      btnSaveWorkspace.style.color = 'var(--accent-sage)';
+    }
+  }
+}
+
 
 /* ----------------------------------------------------------------
    INITIALIZE
    ---------------------------------------------------------------- */
+initThemeSystem();
 initTechCursor();
 renderDashboard();

@@ -12,6 +12,10 @@ Before doing anything technical, tell the user what they're about to get:
 >
 > Here's what makes it great:
 > - **See all your open tabs at a glance** grouped by domain on a clean, responsive grid layout.
+> - **Tab Sleep & RAM Saver (极客内存节省)** cold, crystalline audio chime sweeps paired with breathing sleep `💤` badges, click-to-freeze snowflakes `❄️`, and group-wide card freeze tools (`chrome.tabs.discard`).
+> - **Workspace Session Manager (多命名工作区)** save selected current tabs into distinct, named custom workspaces using an elegant checkbox checklist popup modal, easily launched or purged via dynamic sidebar interactive controls.
+> - **Premium Theme Switcher (双色主题极速切换)** toggle seamlessly between a warm, earthy "Sage Paper" light aesthetic and a glowing, sci-fi dark "Cyber Deck" mode, featuring customized Web Audio synthesizer audio effects and color-shifting confetti particles!
+> - **Vim-style Keyboard Maestro (全键盘极速微操)** mouse-free navigation via `Tab`/`Shift-Tab`, Vim `j`/`k`, or standard Arrow keys (retro sage selection aura glow) with prompt hotkey binds: `Enter` (focus), `d` (close), `s` (save), `f` (freeze).
 > - **Satisfying Web Audio Sound Synthesis & Confetti Physics** swoosh, save, and combo completion sounds synthesized natively + high-fidelity micro-gravity confetti particles.
 > - **Cyberpunk HUD Holographic Cursor** sleek laser targeting, physical spring dampening, and mouse hover/click compression shrink animations.
 > - **Autocomplete Command Palette Search** press `/` or focus the top-right search box to expand it to `600px` and use `ArrowUp`/`ArrowDown`/`Enter` keyboard navigation to switch tabs instantly.
@@ -89,9 +93,13 @@ Once the extension is loaded:
 > 5. **Click "Close all N tabs"** on a group to close the whole thing.
 > 6. **Duplicate tabs** are flagged with an amber badge. Click "Close duplicates" to keep one copy and watch the counts synchronize instantly.
 > 7. **Save a tab for later** by clicking the bookmark icon before closing it. Saved tabs appear in the sidebar.
-> 8. **Search open tabs with / key**: focus the compact top-right search to watch it slide expand to `600px`, typing to filter and instantly navigating suggestions using arrow keys and `Enter`.
-> 9. **Backup open tabs with Save Session**: capture a 100% safe, non-destructive background snapshot to Chrome storage, instantly showing a `Restore Session (N)` button.
-> 10. **Archive and cascades**: manage completed checklists, hovering to delete permanently, or clicking the cascading slide-out "Clear All" button to clean up your history with high-fidelity physical responses.
+> 8. **Tab Sleep & RAM Saver (💤/❄️)**: Active tabs display a freeze snowflake icon (`❄️`). Click it or click 'Freeze all' on cards to safely unload tabs from memory without closing them, displaying a breathing sleep `💤` badge. Plays a chilly sine-sweep chime!
+> 9. **Workspace Session Manager**: Click 'Save Workspace' in the top bar to open an elegant checklist modal popup, choose exactly which tabs you want to include, input a custom name, and save. Manage and restore them in the right sidebar.
+> 10. **Vim-style Keyboard Maestro**: Navigate everything mouse-free! Press `Tab`/`Shift-Tab` or `j`/`k` or Arrow keys to select tabs (highlighted with a retro sage glow), then press `Enter` to jump, `d` to close, `s` to save, or `f` to freeze.
+> 11. **Search open tabs with / key**: focus the compact top-right search to watch it slide expand to `600px`, typing to filter and instantly navigating suggestions using arrow keys and `Enter`.
+> 12. **Backup open tabs with Save Session**: capture a 100% safe, non-destructive background snapshot to Chrome storage, instantly showing a `Restore Session (N)` button.
+> 13. **Archive and cascades**: manage completed checklists, hovering to delete permanently, or clicking the cascading slide-out "Clear All" button to clean up your history with high-fidelity physical responses.
+> 14. **Theme Switcher**: Click the theme toggle button in the top bar to swap instantly between "Sage Paper" (retro-organic warm look) and "Cyber Deck" (matrix cyberpunk glowing look) complete with distinct synthesizer sweeps and matching confetti colors.
 
 That's it! No server to run, no config files. Everything works right away.
 

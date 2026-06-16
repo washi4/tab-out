@@ -24,6 +24,10 @@ The agent will walk you through it. Takes about 1 minute.
 
 ## Features
 
+- **Tab Sleep & RAM Saver (极客标签页“内存拯救者”)** — Displays sleeping tabs with a cozy breathing `💤` badge. Adds a click-to-freeze snowflake `❄️` button on active chips and a "Freeze all tabs" button on group cards to discard tabs and free up hundreds of MBs of memory instantly. Accompanied by a cold, crystalline freeze synthesizer sweep.
+- **Workspace Session Manager (多命名工作区管理)** — Save selected open tabs into separate named workspaces (e.g. "AI Coding", "Travel Planning") using an elegant, grouped checkbox checklist popup modal. Swap or restore them easily from the Saved Workspaces sidebar pane, fully equipped with individual delete controls and tactile slide-in transitions.
+- **Premium Theme Switcher (双色主题极速切换)** — Toggle seamlessly between a warm, earthy "Sage Paper" light aesthetic and a glowing, sci-fi dark "Cyber Deck" mode. Complete with customized, theme-specific Web Audio synthesizer feedback and color-shifting confetti bursts!
+- **Vim-style Keyboard Maestro (全键盘极速微操)** — Navigate, open, freeze, and close tabs entirely from your keyboard without using a mouse. Focus/select tabs with `Tab`/`Shift-Tab`, Vim-keys (`j`/`k`), or Arrow keys (`ArrowUp`/`ArrowDown`). Press `Enter` to jump, `d` to close, `s` to save, and `f` to freeze, fully synced with the holographic target pointer.
 - **See all your tabs at a glance** on a clean grid, grouped by domain
 - **Homepages group** pulls Gmail inbox, X home, YouTube, LinkedIn, GitHub homepages into one card
 - **Satisfying Sound Synthesis & Confetti** plays swoosh/save/combo sounds synthesized directly via Web Audio API + premium confetti burst physics
