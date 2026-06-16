@@ -773,6 +773,16 @@ footer {
   color: var(--muted);
 }
 
+.footer-link {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: var(--text-light);
+}
+
 .refresh-btn {
   font-family: 'DM Sans', sans-serif;
   font-size: 11px;
