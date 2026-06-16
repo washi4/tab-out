@@ -65,6 +65,7 @@ async function fetchOpenTabs() {
       title:    t.title,
       windowId: t.windowId,
       active:   t.active,
+      favIconUrl: t.favIconUrl,
       // Flag Tab Out's own pages so we can detect duplicate new tabs
       isTabOut:
         t.url === newtabUrl ||
@@ -247,36 +248,51 @@ async function closeTabOutDupes() {
    ---------------------------------------------------------------- */
 
 /**
+ * saveTabsForLater(tabs)
+ *
+ * Saves multiple tabs to the "Saved for Later" list in chrome.storage.local
+ * in a single atomic transaction to prevent write-loop race conditions and quota exhaustion.
+ * @param {Array<{ url: string, title: string, favIconUrl?: string }>} tabs
+ */
+async function saveTabsForLater(tabs) {
+  const { deferred = [] } = await chrome.storage.local.get('deferred');
+  const now = new Date().toISOString();
+
+  tabs.forEach((tab, index) => {
+    // Check if there is already an active (not completed, not dismissed) item with the same URL
+    const existingActive = deferred.find(item => item.url === tab.url && !item.completed && !item.dismissed);
+    
+    if (existingActive) {
+      // Prevent duplicate: update title and reset saved timestamp to now
+      existingActive.title = tab.title;
+      existingActive.favIconUrl = tab.favIconUrl || '';
+      existingActive.savedAt = now;
+    } else {
+      // Add new item with robust unique ID
+      const uniqueId = `${Date.now()}-${index}-${Math.floor(Math.random() * 1000)}`;
+      deferred.push({
+        id:         uniqueId,
+        url:        tab.url,
+        title:      tab.title,
+        favIconUrl: tab.favIconUrl || '',
+        savedAt:    now,
+        completed:  false,
+        dismissed:  false,
+      });
+    }
+  });
+
+  await chrome.storage.local.set({ deferred });
+}
+
+/**
  * saveTabForLater(tab)
  *
  * Saves a single tab to the "Saved for Later" list in chrome.storage.local.
- * @param {{ url: string, title: string }} tab
+ * @param {{ url: string, title: string, favIconUrl?: string }} tab
  */
 async function saveTabForLater(tab) {
-  const { deferred = [] } = await chrome.storage.local.get('deferred');
-  
-  // Check if there is already an active (not completed, not dismissed) item with the same URL
-  const existingActive = deferred.find(item => item.url === tab.url && !item.completed && !item.dismissed);
-  
-  if (existingActive) {
-    // Prevent duplicate: update title and reset saved timestamp to now
-    existingActive.title = tab.title;
-    existingActive.favIconUrl = tab.favIconUrl || '';
-    existingActive.savedAt = new Date().toISOString();
-  } else {
-    // Add new item
-    deferred.push({
-      id:        Date.now().toString(),
-      url:       tab.url,
-      title:     tab.title,
-      favIconUrl: tab.favIconUrl || '',
-      savedAt:   new Date().toISOString(),
-      completed: false,
-      dismissed: false,
-    });
-  }
-  
-  await chrome.storage.local.set({ deferred });
+  await saveTabsForLater([tab]);
 }
 
 /**
@@ -2195,9 +2211,13 @@ async function saveCurrentSession() {
   // Play satisfying save sound
   playSaveSound();
 
-  // Save all real tabs to Saved for Later
-  for (const tab of realTabs) {
-    await saveTabForLater(tab);
+  // Save all real tabs to Saved for Later using a single atomic transaction
+  try {
+    await saveTabsForLater(realTabs);
+  } catch (err) {
+    console.error('[tab-out] Failed to batch save tabs:', err);
+    showToast('Failed to save session');
+    return;
   }
 
   // Backup these URLs specifically as the last session
