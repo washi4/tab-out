@@ -776,11 +776,14 @@ footer {
 .footer-link {
   color: var(--muted);
   text-decoration: none;
-  transition: color 0.2s ease;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.25);
+  transition: all 0.2s ease;
+  padding-bottom: 1px;
 }
 
 .footer-link:hover {
   color: var(--text-light);
+  border-bottom: 1px solid var(--text-light);
 }
 
 .refresh-btn {
