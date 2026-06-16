@@ -1898,6 +1898,7 @@ document.addEventListener('click', async (e) => {
 
     playCloseSound();
     triggerCombo(1);
+    if (window.notifyPetAction) window.notifyPetAction('close');
 
     // Animate the chip row out (slides left to discard)
     const chip = actionEl.closest('.page-chip');
@@ -1963,6 +1964,7 @@ document.addEventListener('click', async (e) => {
         favIconUrl: match ? match.favIconUrl : ''
       });
       playSaveSound();
+      if (window.notifyPetAction) window.notifyPetAction('save');
     } catch (err) {
       console.error('[tab-out] Failed to save tab:', err);
       showToast('Failed to save tab');
@@ -3156,4 +3158,300 @@ function applyTheme(themeName) {
    ---------------------------------------------------------------- */
 initThemeSystem();
 initTechCursor();
+initPixelPetSystem();
 renderDashboard();
+
+
+/* ================================================================
+   PIXEL TAB PET COMPCompanion SYSTEM Logic
+   ================================================================ */
+
+let petBubbleTimeout = null;
+
+/**
+ * playPetMeow()
+ * Synthesizes Mochi's cute soft "meow" sweep via Web Audio API.
+ */
+function playPetMeow() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // First pitch chirp
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'triangle';
+    osc1.frequency.setValueAtTime(750, audioCtx.currentTime);
+    osc1.frequency.exponentialRampToValueAtTime(1150, audioCtx.currentTime + 0.08);
+    
+    gain1.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+    
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start();
+    osc1.stop(audioCtx.currentTime + 0.12);
+
+    // Soft harmonized delay chirp for purr warmth
+    setTimeout(() => {
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1150, audioCtx.currentTime);
+      osc2.frequency.exponentialRampToValueAtTime(1250, audioCtx.currentTime + 0.06);
+      
+      gain2.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+      
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.start();
+      osc2.stop(audioCtx.currentTime + 0.08);
+    }, 40);
+
+  } catch (err) {
+    console.error('[tab-out] playPetMeow failed:', err);
+  }
+}
+
+/**
+ * playPetBeep()
+ * Synthesizes Byte's retro sci-fi 8-bit FM chime chord.
+ */
+function playPetBeep() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'square';
+    osc1.frequency.setValueAtTime(1046.50, audioCtx.currentTime); // C6
+    osc1.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.04); // E6
+    
+    gain1.gain.setValueAtTime(0.04, audioCtx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start();
+    osc1.stop(audioCtx.currentTime + 0.1);
+  } catch (err) {
+    console.error('[tab-out] playPetBeep failed:', err);
+  }
+}
+
+/**
+ * triggerPetVoice()
+ * Plays active sound feedback depending on currently active theme.
+ */
+function triggerPetVoice() {
+  const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+  if (isCyber) {
+    playPetBeep();
+  } else {
+    playPetMeow();
+  }
+}
+
+/**
+ * showPetBubble(text, durationMs)
+ * Springs up the speech bubble with customized geeky commentary.
+ */
+function showPetBubble(text, durationMs = 3500) {
+  const bubble = document.getElementById('petBubble');
+  const bubbleText = document.getElementById('petBubbleText');
+  if (!bubble || !bubbleText) return;
+
+  bubbleText.textContent = text;
+  bubble.classList.add('visible');
+
+  if (petBubbleTimeout) {
+    clearTimeout(petBubbleTimeout);
+  }
+
+  petBubbleTimeout = setTimeout(() => {
+    bubble.classList.remove('visible');
+  }, durationMs);
+}
+
+/**
+ * triggerPetAnimation(className)
+ * Triggers a CSS keyframe micro-interaction state and removes it.
+ */
+function triggerPetAnimation(className) {
+  const wrapper = document.getElementById('petSpriteWrapper');
+  if (!wrapper) return;
+
+  wrapper.classList.remove('pet-action-hop', 'pet-action-spin', 'pet-action-shake');
+  // Trigger DOM reflow to restart CSS keyframe transitions
+  void wrapper.offsetWidth;
+  wrapper.classList.add(className);
+}
+
+/**
+ * updatePetState(tabCount)
+ * Recalculates pet mood, wiggles elements, modifies expressions and sets localized quotes.
+ */
+function updatePetState(tabCount) {
+  const root = document.documentElement;
+  const isCyber = root.classList.contains('theme-cyberpunk');
+  
+  const spriteMochi = document.getElementById('spriteMochi');
+  const spriteByte = document.getElementById('spriteByte');
+  const mochiBlanket = document.getElementById('mochiBlanket');
+  const byteExpression = document.getElementById('byteExpression');
+  
+  if (!spriteMochi || !spriteByte) return;
+
+  // Toggle visible theme-dependent sprite
+  if (isCyber) {
+    spriteMochi.style.display = 'none';
+    spriteByte.style.display = 'flex';
+  } else {
+    spriteMochi.style.display = 'flex';
+    spriteByte.style.display = 'none';
+  }
+
+  // Manage expressions and sleeping layers
+  if (tabCount === 0) {
+    spriteMochi.classList.add('sleeping');
+    if (mochiBlanket) mochiBlanket.style.display = 'block';
+    if (byteExpression) byteExpression.textContent = '- _ -';
+  } else {
+    spriteMochi.classList.remove('sleeping');
+    if (mochiBlanket) mochiBlanket.style.display = 'none';
+    
+    if (tabCount <= 10) {
+      if (byteExpression) byteExpression.textContent = '^ _ ^';
+    } else if (tabCount <= 20) {
+      if (byteExpression) byteExpression.textContent = 'o _ o';
+    } else {
+      if (byteExpression) byteExpression.textContent = '✖ _ ✖';
+    }
+  }
+}
+
+/**
+ * getPetContextQuote(tabCount)
+ * Returns a randomized funny quote tailored to current layout load.
+ */
+function getPetContextQuote(tabCount) {
+  const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+  
+  if (tabCount === 0) {
+    const quotes = isCyber
+      ? ["Zen core ready.", "System cooling. Zero load.", "All threads clear.", "Standing by..."]
+      : ["呼... 暖呼呼喵... 💤", "数码界终归禅静 ✨", "猫饼已摊平...", "好舒服... 🍵"];
+    return quotes[Math.floor(Math.random() * quotes.length)];
+  }
+  
+  if (tabCount <= 10) {
+    const quotes = isCyber
+      ? ["Vibe: Ideal. Speed optimal.", "Threads optimized! 🌿", "Processor breathing easily.", "Ready to deploy."]
+      : ["一切井井有条喵！😻", "今天也是利落的一天！", "出来晒太阳啦~ 🌸", "心情极度舒适！"];
+    return quotes[Math.floor(Math.random() * quotes.length)];
+  }
+  
+  if (tabCount <= 20) {
+    const quotes = isCyber
+      ? ["Warning: RAM threshold.", "A bit crowded here...", "Active process buffer full.", "Load rising."]
+      : ["事情开始多起来了喵...", "我的小尾巴转不过来了", "你在默默憋什么大招？", "要加油了喵！⏰"];
+    return quotes[Math.floor(Math.random() * quotes.length)];
+  }
+  
+  const quotes = isCyber
+    ? ["🚨 CRITICAL OVERFLOW!", "SYSTEM STALL RISK!", "RAM BURST. DEPLOY SHIELD!", "ABORT ALL CLUTTER! ✖_✖"]
+    : ["救命！被网页淹没了！🙀", "RAM 要炸了喵！！🚨", "Too many tabs... 躲进箱子", "快把不要的冷冻掉喵！❄️"];
+  return quotes[Math.floor(Math.random() * quotes.length)];
+}
+
+/**
+ * pokePet()
+ * Poke trigger to play voice, bounce sprite and say localized quotes.
+ */
+function pokePet() {
+  triggerPetVoice();
+  
+  chrome.tabs.query({}, (tabs) => {
+    // Filter out Tab Out itself
+    const actualTabs = tabs.filter(t => t.url && !t.url.startsWith('chrome://') && !t.url.startsWith('edge://'));
+    const tabCount = actualTabs.length;
+    
+    // Choose hop or spin
+    const r = Math.random();
+    if (r < 0.6) {
+      triggerPetAnimation('pet-action-hop');
+    } else {
+      triggerPetAnimation('pet-action-spin');
+    }
+    
+    // Show randomized interactive comments
+    const isCyber = document.documentElement.classList.contains('theme-cyberpunk');
+    const pokes = isCyber
+      ? ["Interaction acknowledged. ^_^", "Core ping: 5ms", "Synthesizer online. Beep!", "Please don't tickle my antenna!"]
+      : ["喵呜~ 蹭蹭！💖", "摸我尾巴会漏电喵！⚡", "咕噜咕噜踩奶中...", "贴贴！(๑•́ ₃ •̀๑)"];
+    
+    showPetBubble(pokes[Math.floor(Math.random() * pokes.length)]);
+  });
+}
+
+/**
+ * initPixelPetSystem()
+ * Sets up listeners and sets initial state.
+ */
+function initPixelPetSystem() {
+  const petContainer = document.getElementById('tabPetContainer');
+  if (!petContainer) return;
+
+  // Add click trigger
+  petContainer.addEventListener('click', pokePet);
+
+  // Monitor tab count changes directly via background messages or simple checks
+  const checkState = () => {
+    chrome.tabs.query({}, (tabs) => {
+      const actualTabs = tabs.filter(t => t.url && !t.url.startsWith('chrome://') && !t.url.startsWith('edge://'));
+      updatePetState(actualTabs.length);
+    });
+  };
+
+  // Check state on init
+  checkState();
+
+  // Re-check on dynamic click updates or themes
+  document.getElementById('btnThemeToggle').addEventListener('click', () => {
+    setTimeout(checkState, 150);
+  });
+
+  // Greet user shortly on initial load
+  setTimeout(() => {
+    chrome.tabs.query({}, (tabs) => {
+      const actualTabs = tabs.filter(t => t.url && !t.url.startsWith('chrome://') && !t.url.startsWith('edge://'));
+      showPetBubble(getPetContextQuote(actualTabs.length));
+    });
+  }, 1000);
+}
+
+
+/* ================================================================
+   HOOK INTO DASHBOARD OPERATIONS TO EMIT COMPANION EFFECTS
+   ================================================================ */
+
+// Hook into single tab deletion
+const origCloseTab = window.closeTab; 
+// Check if closeTab is global or declared locally. Let's patch standard close and save actions directly.
+// To do this reliably, we can listen for clicks inside document for actions or just set intervals.
+// Let's hook our custom pet reaction events globally.
+function notifyPetAction(actionType) {
+  if (actionType === 'close') {
+    triggerPetAnimation('pet-action-hop');
+    showPetBubble(Math.random() < 0.5 ? "消灭一个！Snappy! 💨" : "啪！垃圾页面退散！🔥");
+  } else if (actionType === 'save') {
+    triggerPetAnimation('pet-action-spin');
+    showPetBubble(Math.random() < 0.5 ? "安全锁存！妥妥哒 💾" : "成功保存至百宝袋！✨");
+  } else if (actionType === 'freeze') {
+    triggerPetAnimation('pet-action-hop');
+    showPetBubble("呼... 瞬间省电 70%! ❄️");
+  }
+}
+
+// Make notifyPetAction global so other click handlers can invoke it
+window.notifyPetAction = notifyPetAction;

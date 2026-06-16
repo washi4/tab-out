@@ -239,6 +239,63 @@
 <div class="tech-cursor-dot" id="techCursorDot"></div>
 <div class="tech-cursor-ring" id="techCursorRing"></div>
 
+<!-- ================================================================
+     PIXEL TAB PET — Fixed-floating responsive companion
+     ================================================================ -->
+<div class="tab-pet-container" id="tabPetContainer" title="Poke me!">
+  <div class="pet-bubble" id="petBubble">
+    <span class="bubble-text" id="petBubbleText">Hello World!</span>
+    <div class="bubble-arrow"></div>
+  </div>
+  <div class="pet-sprite-wrapper" id="petSpriteWrapper">
+    <!-- Mochi Cat Layers -->
+    <div class="pet-mochi" id="spriteMochi">
+      <div class="mochi-ears">
+        <div class="mochi-ear left"></div>
+        <div class="mochi-ear right"></div>
+      </div>
+      <div class="mochi-face">
+        <div class="mochi-eyes">
+          <div class="mochi-eye left"></div>
+          <div class="mochi-eye right"></div>
+        </div>
+        <div class="mochi-blush">
+          <div class="blush-dot left"></div>
+          <div class="blush-dot right"></div>
+        </div>
+        <div class="mochi-mouth">w</div>
+      </div>
+      <div class="mochi-body">
+        <div class="mochi-paws">
+          <div class="mochi-paw left"></div>
+          <div class="mochi-paw right"></div>
+        </div>
+        <div class="mochi-tail" id="mochiTail"></div>
+      </div>
+      <div class="mochi-blanket" id="mochiBlanket" style="display: none;"></div>
+    </div>
+    
+    <!-- Byte Robot Layers -->
+    <div class="pet-byte" id="spriteByte" style="display: none;">
+      <div class="byte-antenna">
+        <div class="antenna-bulb"></div>
+      </div>
+      <div class="byte-head">
+        <div class="byte-screen">
+          <div class="byte-expression" id="byteExpression">^ _ ^</div>
+        </div>
+      </div>
+      <div class="byte-body">
+        <div class="byte-glow-core"></div>
+        <div class="byte-rings">
+          <div class="byte-ring"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pet-platform" id="petPlatform"></div>
+</div>
+
 <!-- Personal config (gitignored) — defines LOCAL_LANDING_PAGE_PATTERNS etc. -->
 <!-- If the file doesn't exist, that's fine — app.js uses sensible defaults. -->
 <script src="config.local.js"></script>
