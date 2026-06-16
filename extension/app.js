@@ -1192,12 +1192,15 @@ async function renderDeferredColumn() {
     }
 
     // Render archive section
+    const btnClear = document.getElementById('btnClearArchive');
     if (archived.length > 0) {
       archiveCountEl.textContent = `(${archived.length})`;
       archiveList.innerHTML = archived.map(item => renderArchiveItem(item)).join('');
       archiveEl.style.display = 'block';
+      if (btnClear) btnClear.style.display = 'inline-flex';
     } else {
       archiveEl.style.display = 'none';
+      if (btnClear) btnClear.style.display = 'none';
     }
 
   } catch (err) {
@@ -1697,6 +1700,34 @@ document.addEventListener('click', async (e) => {
         renderDeferredColumn();
       }, 300);
     }
+    return;
+  }
+
+  // ---- Clear ALL archived items permanently ----
+  if (action === 'clear-archive') {
+    const { deferred = [] } = await chrome.storage.local.get('deferred');
+    
+    // Set dismissed=true on ALL completed items so they vanish permanently
+    deferred.forEach(item => {
+      if (item.completed) {
+        item.dismissed = true;
+      }
+    });
+
+    await chrome.storage.local.set({ deferred });
+
+    // Animate all archive items sliding away
+    const items = document.querySelectorAll('.archive-item');
+    items.forEach((item, index) => {
+      setTimeout(() => {
+        item.classList.add('removing');
+      }, index * 40); // cascading slide-out effect
+    });
+
+    setTimeout(() => {
+      renderDeferredColumn();
+      showToast('Archive cleared permanently');
+    }, Math.max(300, items.length * 40 + 150));
     return;
   }
 
