@@ -1539,10 +1539,35 @@ document.addEventListener('click', async (e) => {
   const saveWsBtn = e.target.closest('#btnSaveWorkspace');
   if (saveWsBtn) {
     e.preventDefault();
-    const name = prompt("Enter a name for this workspace:", "Workspace " + new Date().toLocaleDateString());
-    if (name) {
-      await saveWorkspace(name.trim());
-    }
+    openWorkspaceModal();
+    return;
+  }
+
+  const modalCloseBtn = e.target.closest('#btnWorkspaceModalClose') || e.target.closest('#btnWorkspaceModalCancel');
+  if (modalCloseBtn) {
+    e.preventDefault();
+    closeWorkspaceModal();
+    return;
+  }
+
+  const selectAllBtn = e.target.closest('#btnSelectAllTabs');
+  if (selectAllBtn) {
+    e.preventDefault();
+    selectWorkspaceAll();
+    return;
+  }
+
+  const selectNoneBtn = e.target.closest('#btnSelectNoneTabs');
+  if (selectNoneBtn) {
+    e.preventDefault();
+    selectWorkspaceNone();
+    return;
+  }
+
+  const modalSaveBtn = e.target.closest('#btnWorkspaceModalSave');
+  if (modalSaveBtn) {
+    e.preventDefault();
+    await handleWorkspaceSave();
     return;
   }
 
@@ -2274,6 +2299,17 @@ document.addEventListener('input', (e) => {
 
 // ---- Key bindings for quick search and escape ----
 document.addEventListener('keydown', (e) => {
+  const workspaceModalBackdrop = document.getElementById('workspaceModalBackdrop');
+  const isModalOpen = workspaceModalBackdrop && workspaceModalBackdrop.classList.contains('visible');
+  
+  if (isModalOpen) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeWorkspaceModal();
+    }
+    return;
+  }
+
   const active = document.activeElement;
   const isInput = active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable;
   
@@ -2641,18 +2677,144 @@ function escapeHtml(str) {
 }
 
 /**
- * saveWorkspace(name)
+ * openWorkspaceModal()
  *
- * Saves currently open tabs as a named workspace in local storage.
+ * Populates and opens the Workspace selection modal popup.
  */
-async function saveWorkspace(name) {
+function openWorkspaceModal() {
+  const backdrop = document.getElementById('workspaceModalBackdrop');
+  const nameInput = document.getElementById('workspaceNameInput');
+  const tabsList = document.getElementById('workspaceModalTabsList');
+  if (!backdrop || !nameInput || !tabsList) return;
+
+  // Clear name and set placeholder/default value
+  nameInput.value = "Workspace " + new Date().toLocaleDateString();
+
+  // Populate tabs list with checkboxes grouped by domain
   const realTabs = getRealTabs();
   if (realTabs.length === 0) {
     showToast('No open tabs to save!');
     return;
   }
 
-  const urls = realTabs.map(t => t.url);
+  const groupMap = {};
+  for (const tab of realTabs) {
+    let domain = 'Other';
+    try {
+      if (tab.url && tab.url.startsWith('file://')) {
+        domain = 'Local Files';
+      } else if (tab.url) {
+        const hostname = new URL(tab.url).hostname;
+        domain = hostname.replace(/^www\./, '') || 'Other';
+      }
+    } catch {
+      domain = 'Other';
+    }
+    if (!groupMap[domain]) groupMap[domain] = [];
+    groupMap[domain].push(tab);
+  }
+
+  let html = '';
+  const sortedDomains = Object.keys(groupMap).sort();
+  for (const domain of sortedDomains) {
+    html += `<div class="modal-group-title">${escapeHtml(domain)}</div>`;
+    const tabs = groupMap[domain];
+    for (const tab of tabs) {
+      const escapedTitle = escapeHtml(tab.title || tab.url || 'Untitled');
+      const escapedUrl = escapeHtml(tab.url || '');
+      const faviconUrl = tab.favIconUrl || 'icons/icon16.png';
+      html += `
+        <label class="modal-tab-item">
+          <input type="checkbox" class="modal-tab-checkbox" data-tab-id="${tab.id}" data-url="${escapedUrl}" checked>
+          <img class="modal-tab-favicon" src="${faviconUrl}" onerror="this.src='icons/icon16.png';">
+          <span class="modal-tab-title" title="${escapedTitle}">${escapedTitle}</span>
+        </label>
+      `;
+    }
+  }
+
+  tabsList.innerHTML = html;
+
+  // Show modal with animation
+  backdrop.classList.add('visible');
+
+  // Focus the name input and select its text
+  setTimeout(() => {
+    nameInput.focus();
+    nameInput.select();
+  }, 100);
+}
+
+/**
+ * closeWorkspaceModal()
+ *
+ * Closes the Workspace selection modal popup.
+ */
+function closeWorkspaceModal() {
+  const backdrop = document.getElementById('workspaceModalBackdrop');
+  if (backdrop) {
+    backdrop.classList.remove('visible');
+  }
+}
+
+/**
+ * selectWorkspaceAll()
+ *
+ * Checks all checkboxes in the Workspace modal tabs list.
+ */
+function selectWorkspaceAll() {
+  const checkboxes = document.querySelectorAll('.modal-tab-checkbox');
+  checkboxes.forEach(cb => cb.checked = true);
+}
+
+/**
+ * selectWorkspaceNone()
+ *
+ * Unchecks all checkboxes in the Workspace modal tabs list.
+ */
+function selectWorkspaceNone() {
+  const checkboxes = document.querySelectorAll('.modal-tab-checkbox');
+  checkboxes.forEach(cb => cb.checked = false);
+}
+
+/**
+ * handleWorkspaceSave()
+ *
+ * Validates form inputs and saves the custom Workspace.
+ */
+async function handleWorkspaceSave() {
+  const nameInput = document.getElementById('workspaceNameInput');
+  if (!nameInput) return;
+
+  const name = nameInput.value.trim();
+  if (!name) {
+    showToast('Please enter a workspace name!');
+    nameInput.focus();
+    return;
+  }
+
+  const checkedBoxes = document.querySelectorAll('.modal-tab-checkbox:checked');
+  if (checkedBoxes.length === 0) {
+    showToast('Please select at least one tab!');
+    return;
+  }
+
+  const urls = Array.from(checkedBoxes).map(cb => cb.dataset.url);
+  await saveWorkspace(name, urls);
+  closeWorkspaceModal();
+}
+
+/**
+ * saveWorkspace(name, urls)
+ *
+ * Saves selected tab URLs as a named workspace in local storage.
+ */
+async function saveWorkspace(name, urls) {
+  if (!urls || urls.length === 0) {
+    showToast('No tabs selected to save!');
+    return;
+  }
+
   const { workspaces = [] } = await chrome.storage.local.get('workspaces');
 
   const newWorkspace = {
@@ -2666,7 +2828,7 @@ async function saveWorkspace(name) {
   await chrome.storage.local.set({ workspaces });
 
   playSaveSound();
-  showToast(`Saved workspace "${name}" with ${urls.length} tabs! 📁`);
+  showToast(`Saved workspace "${name}" with ${urls.length} tab${urls.length !== 1 ? 's' : ''}! 📁`);
   await renderStaticDashboard();
 }
 

@@ -174,6 +174,46 @@
 </div><!-- end .container -->
 
 <!-- ================================================================
+     WORKSPACE TAB SELECTION MODAL
+     ================================================================ -->
+<div class="workspace-modal-backdrop" id="workspaceModalBackdrop">
+  <div class="workspace-modal" id="workspaceModal">
+    <div class="workspace-modal-header">
+      <h3>Save Named Workspace</h3>
+      <button class="modal-close-btn" id="btnWorkspaceModalClose">&times;</button>
+    </div>
+    <div class="workspace-modal-body">
+      <div class="input-group">
+        <label for="workspaceNameInput">Workspace Name</label>
+        <input type="text" id="workspaceNameInput" placeholder="e.g. AI Coding, Travel Planning..." autocomplete="off">
+      </div>
+      <div class="tabs-select-section">
+        <div class="tabs-select-header">
+          <label>Select tabs to include:</label>
+          <div class="bulk-toggles">
+            <button class="text-toggle-btn" id="btnSelectAllTabs">Select All</button>
+            <span class="divider">|</span>
+            <button class="text-toggle-btn" id="btnSelectNoneTabs">Deselect All</button>
+          </div>
+        </div>
+        <div class="modal-tabs-list" id="workspaceModalTabsList">
+          <!-- Dynamic tab items grouped by domain, with checkboxes -->
+        </div>
+      </div>
+    </div>
+    <div class="workspace-modal-footer">
+      <button class="tactile-btn secondary" id="btnWorkspaceModalCancel">Cancel</button>
+      <button class="tactile-btn" id="btnWorkspaceModalSave">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" style="width: 14px; height: 14px; margin-right: 6px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+        <span>Save Workspace</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
      TOAST — floats above everything, used for action confirmations
      Hidden by default via CSS (opacity:0, translateY)
      ================================================================ -->
