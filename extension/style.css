@@ -56,6 +56,8 @@ body::before {
 
 /* ---- Header ---- */
 header {
+  position: relative;
+  z-index: 3000; /* ensures header and its dropdowns always render on top of grid cards and sidebars */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -67,14 +69,14 @@ header {
 .search-container {
   position: relative;
   margin: 0;
-  width: 280px; /* elegant, compact right-side alignment */
+  width: 300px; /* elegant, compact right-side alignment */
   transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   will-change: width, transform, opacity;
 }
 
 .search-container:focus-within {
-  width: 450px; /* expands beautifully when focused! */
-  z-index: 2000;
+  width: 600px; /* expands beautifully when focused for max readability! */
+  z-index: 4000;
 }
 
 .search-input-wrapper {
@@ -1614,7 +1616,7 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   border: 1px solid var(--warm-gray);
   border-radius: 12px;
   box-shadow: 0 16px 40px rgba(26, 22, 19, 0.12), 0 0 0 1px rgba(26, 22, 19, 0.04);
-  z-index: 2000;
+  z-index: 4000;
   display: flex;
   flex-direction: column;
   padding: 6px;
