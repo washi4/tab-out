@@ -1926,7 +1926,92 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 
+// ---- Cyberpunk/HUD Sci-fi Custom Cursor Animation Engine ----
+function initTechCursor() {
+  const dot = document.getElementById('techCursorDot');
+  const ring = document.getElementById('techCursorRing');
+  const html = document.documentElement;
+
+  if (!dot || !ring) return;
+
+  // Only activate custom cursor on devices that support hover (e.g. desktops with mice)
+  if (!window.matchMedia('(hover: hover)').matches) {
+    return;
+  }
+
+  html.classList.add('has-custom-cursor');
+
+  let mouseX = -100;
+  let mouseY = -100;
+  let ringX = -100;
+  let ringY = -100;
+  let isHovering = false;
+  let isFirstMove = true;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    
+    if (isFirstMove) {
+      ringX = mouseX;
+      ringY = mouseY;
+      isFirstMove = false;
+    }
+    
+    // Dot instantly follows the mouse pointer for pixel-perfect responsiveness
+    dot.style.left = `${mouseX}px`;
+    dot.style.top = `${mouseY}px`;
+    
+    // Dynamic hover target detection
+    const target = e.target;
+    const isInteractive = target.closest('a, button, input, .clickable, .page-chip, .archive-toggle, .deferred-checkbox, .deferred-dismiss');
+    
+    if (isInteractive && !isHovering) {
+      isHovering = true;
+      html.classList.add('cursor-hovering');
+    } else if (!isInteractive && isHovering) {
+      isHovering = false;
+      html.classList.remove('cursor-hovering');
+    }
+  });
+
+  // Smooth floating orbit animation via Lerp (Linear Interpolation) inside requestAnimationFrame
+  function updateRingPosition() {
+    // 0.15 is the interpolation factor (the smaller, the smoother/more floaty the delay)
+    ringX += (mouseX - ringX) * 0.15;
+    ringY += (mouseY - ringY) * 0.15;
+
+    ring.style.left = `${ringX}px`;
+    ring.style.top = `${ringY}px`;
+
+    requestAnimationFrame(updateRingPosition);
+  }
+  requestAnimationFrame(updateRingPosition);
+
+  // Click pulse compress state
+  document.addEventListener('mousedown', () => {
+    html.classList.add('cursor-clicking');
+  });
+
+  document.addEventListener('mouseup', () => {
+    html.classList.remove('cursor-clicking');
+  });
+
+  // Hide cursor on leaving browser window boundary
+  document.addEventListener('mouseleave', () => {
+    dot.style.opacity = '0';
+    ring.style.opacity = '0';
+  });
+
+  document.addEventListener('mouseenter', () => {
+    dot.style.opacity = '1';
+    ring.style.opacity = '1';
+  });
+}
+
+
 /* ----------------------------------------------------------------
    INITIALIZE
    ---------------------------------------------------------------- */
+initTechCursor();
 renderDashboard();

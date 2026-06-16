@@ -1450,3 +1450,143 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   border-radius: 2px;
   padding: 0 1px;
 }
+
+
+/* ============================================================
+   CYBERPUNK / HUD SCI-FI INTERACTIVE CURSOR
+   ============================================================ */
+@media (hover: hover) {
+  html.has-custom-cursor,
+  html.has-custom-cursor body,
+  html.has-custom-cursor .clickable,
+  html.has-custom-cursor button,
+  html.has-custom-cursor a,
+  html.has-custom-cursor .page-chip,
+  html.has-custom-cursor .archive-toggle,
+  html.has-custom-cursor .deferred-checkbox,
+  html.has-custom-cursor .deferred-dismiss {
+    cursor: none !important;
+  }
+
+  /* Retain standard text cursor for inputs for best UX */
+  html.has-custom-cursor input,
+  html.has-custom-cursor textarea {
+    cursor: text !important;
+  }
+
+  .tech-cursor-dot {
+    display: block;
+    position: fixed;
+    top: -10px;
+    left: -10px;
+    width: 6px;
+    height: 6px;
+    background: #ffb020;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 100000;
+    transform: translate(-50%, -50%);
+    transition: width 0.15s cubic-bezier(0.25, 0.8, 0.25, 1.2), 
+                height 0.15s cubic-bezier(0.25, 0.8, 0.25, 1.2), 
+                background-color 0.2s;
+    box-shadow: 0 0 10px rgba(255, 176, 32, 0.8);
+  }
+
+  .tech-cursor-ring {
+    display: block;
+    position: fixed;
+    top: -40px;
+    left: -40px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(255, 176, 32, 0.45);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 99999;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1.25), 
+                height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1.25), 
+                border-color 0.25s, 
+                border-style 0.25s,
+                background-color 0.3s,
+                opacity 0.2s;
+  }
+
+  /* HUD Crosshair lines using pseudo elements for maximum sci-fi aesthetic */
+  .tech-cursor-ring::before,
+  .tech-cursor-ring::after {
+    content: '';
+    position: absolute;
+    background: rgba(255, 176, 32, 0.35);
+    transition: opacity 0.25s;
+    opacity: 0;
+  }
+
+  /* Horizontal crosshair */
+  .tech-cursor-ring::before {
+    top: 50%;
+    left: -6px;
+    right: -6px;
+    height: 1px;
+    transform: translateY(-50%);
+  }
+
+  /* Vertical crosshair */
+  .tech-cursor-ring::after {
+    left: 50%;
+    top: -6px;
+    bottom: -6px;
+    width: 1px;
+    transform: translateX(-50%);
+  }
+
+  /* Interactive Hover State - Snappy Lock On */
+  html.has-custom-cursor.cursor-hovering .tech-cursor-dot {
+    width: 4px;
+    height: 4px;
+    background: #ffb020;
+    box-shadow: 0 0 12px rgba(255, 176, 32, 1);
+  }
+
+  html.has-custom-cursor.cursor-hovering .tech-cursor-ring {
+    width: 48px;
+    height: 48px;
+    border: 1.5px dashed #ffb020;
+    background: rgba(255, 176, 32, 0.05);
+    box-shadow: 0 0 15px rgba(255, 176, 32, 0.15);
+    animation: tech-cursor-spin 6s linear infinite;
+  }
+
+  html.has-custom-cursor.cursor-hovering .tech-cursor-ring::before,
+  html.has-custom-cursor.cursor-hovering .tech-cursor-ring::after {
+    opacity: 1;
+  }
+
+  /* Click state - Active Pulse compression */
+  html.has-custom-cursor.cursor-clicking .tech-cursor-dot {
+    width: 12px;
+    height: 12px;
+    background: #ffb020;
+    opacity: 0.8;
+  }
+
+  html.has-custom-cursor.cursor-clicking .tech-cursor-ring {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #ffb020;
+    background: rgba(255, 176, 32, 0.2);
+    box-shadow: 0 0 20px rgba(255, 176, 32, 0.4);
+    animation: none;
+  }
+
+  @keyframes tech-cursor-spin {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+}
+
+/* Fallback: Hide cursor elements when custom cursor is inactive (e.g., touch/mobile) */
+.tech-cursor-dot,
+.tech-cursor-ring {
+  display: none;
+}
