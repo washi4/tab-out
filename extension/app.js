@@ -1867,9 +1867,96 @@ function escapeRegExp(string) {
 }
 
 // ---- Global tab search — filter open tabs as user types ----
+// State for search autocomplete dropdown keyboard navigation
+let activeDropdownIndex = -1;
+let dropdownMatches = [];
+
+/**
+ * updateSearchDropdown(query)
+ *
+ * Populates the autocomplete dropdown with matched tabs, highlighting query text,
+ * and handles show/hide logic.
+ */
+function updateSearchDropdown(query) {
+  const dropdown = document.getElementById('searchDropdown');
+  if (!dropdown) return;
+
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+    dropdownMatches = [];
+    activeDropdownIndex = -1;
+    return;
+  }
+
+  // Find all matching open tabs (excluding Tab Out's own page)
+  const realTabs = getRealTabs();
+  dropdownMatches = realTabs.filter(t => 
+    (t.title || '').toLowerCase().includes(q) || 
+    (t.url || '').toLowerCase().includes(q)
+  );
+
+  if (dropdownMatches.length === 0) {
+    dropdown.innerHTML = '<div class="dropdown-no-results">No suggestions found</div>';
+    dropdown.style.display = 'block';
+    activeDropdownIndex = -1;
+    return;
+  }
+
+  // Limit to top 6 results for premium, readable HUD dropdown
+  const displayMatches = dropdownMatches.slice(0, 6);
+  dropdownMatches = displayMatches; // Keep state in sync with rendered elements
+  activeDropdownIndex = 0; // Default to first item selected for instant press-Enter ease
+
+  const itemsHtml = displayMatches.map((tab, idx) => {
+    let domain = '';
+    try { domain = new URL(tab.url).hostname.replace(/^www\./, ''); } catch {}
+    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
+    const activeClass = idx === 0 ? ' active' : '';
+
+    // Highlight matches in title and URL
+    const title = tab.title || tab.url;
+    const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+    const highlightedTitle = title.replace(regex, '<span class="search-highlight">$1</span>');
+    const highlightedUrl = tab.url.replace(regex, '<span class="search-highlight">$1</span>');
+
+    return `
+      <div class="dropdown-item${activeClass}" data-index="${idx}" data-url="${encodeURIComponent(tab.url)}">
+        ${faviconUrl ? `<img class="dropdown-favicon" src="${faviconUrl}" alt="">` : ''}
+        <div class="dropdown-info">
+          <div class="dropdown-title">${highlightedTitle}</div>
+          <div class="dropdown-url">${highlightedUrl}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  dropdown.innerHTML = itemsHtml;
+  dropdown.style.display = 'block';
+}
+
+/**
+ * updateActiveDropdownItem()
+ *
+ * Synchronizes the .active class on the dropdown elements and scrolls them into view.
+ */
+function updateActiveDropdownItem() {
+  const items = document.querySelectorAll('.dropdown-item');
+  items.forEach((item, idx) => {
+    if (idx === activeDropdownIndex) {
+      item.classList.add('active');
+      item.scrollIntoView({ block: 'nearest' });
+    } else {
+      item.classList.remove('active');
+    }
+  });
+}
+
 document.addEventListener('input', (e) => {
   if (e.target.id !== 'globalSearch') return;
   filterTabs(e.target.value);
+  updateSearchDropdown(e.target.value);
 });
 
 // ---- Key bindings for quick search and escape ----
@@ -1891,7 +1978,59 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && active.id === 'globalSearch') {
     active.value = '';
     filterTabs('');
+    updateSearchDropdown('');
     active.blur();
+  }
+
+  // Intercept ArrowUp/ArrowDown/Enter keys inside search bar for autocomplete list navigation
+  if (active.id === 'globalSearch') {
+    const hasMatches = dropdownMatches.length > 0;
+
+    if (e.key === 'ArrowDown' && hasMatches) {
+      e.preventDefault();
+      activeDropdownIndex = (activeDropdownIndex + 1) % dropdownMatches.length;
+      updateActiveDropdownItem();
+    } else if (e.key === 'ArrowUp' && hasMatches) {
+      e.preventDefault();
+      activeDropdownIndex = (activeDropdownIndex - 1 + dropdownMatches.length) % dropdownMatches.length;
+      updateActiveDropdownItem();
+    } else if (e.key === 'Enter' && hasMatches && activeDropdownIndex >= 0) {
+      e.preventDefault();
+      const targetTab = dropdownMatches[activeDropdownIndex];
+      if (targetTab && targetTab.url) {
+        focusTab(targetTab.url);
+        // Reset search
+        active.value = '';
+        filterTabs('');
+        updateSearchDropdown('');
+        active.blur();
+      }
+    }
+  }
+});
+
+// ---- Handle clicking on dropdown item or clicking outside to close it ----
+document.addEventListener('click', (e) => {
+  const dropdownItem = e.target.closest('.dropdown-item');
+  if (dropdownItem) {
+    const url = decodeURIComponent(dropdownItem.dataset.url);
+    if (url) {
+      focusTab(url);
+      const searchInput = document.getElementById('globalSearch');
+      if (searchInput) {
+        searchInput.value = '';
+        filterTabs('');
+        updateSearchDropdown('');
+        searchInput.blur();
+      }
+    }
+    return;
+  }
+
+  // Click outside to close dropdown
+  if (!e.target.closest('.search-container')) {
+    const dropdown = document.getElementById('searchDropdown');
+    if (dropdown) dropdown.style.display = 'none';
   }
 });
 
