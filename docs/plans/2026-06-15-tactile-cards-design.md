@@ -40,6 +40,11 @@ Enhance the physical feel and responsiveness of the Tab Out dashboard. By adding
 - **Bubble Plop (`playSaveSound`)**: A rapidly rising sine frequency sweep from 300Hz to 1200Hz over 0.15s, making a perfect organic "plop/bubble" sound when saving a tab.
 - **Achievement Chime (`playChimeSound`)**: An arpeggiated major chord bell chime (C5, E5, G5, C6) with natural bell decay when checking off list items.
 
+### 7. Dynamic Header Button Collapse on Search Focus
+- **Concept**: When the global search input gains focus (active typing), collapse sibling action buttons in the header to a compact, icon-only layout to conserve horizontal space and avoid layout crowding.
+- **Visuals**: The button text smoothly shrinks to `max-width: 0` and fades out (`opacity: 0`), while the buttons transition to a perfect `38px * 38px` squircle shape. Standard and Cyberpunk hover-shadow states are perfectly preserved.
+- **Trigger**: CSS-only state machine via `.header-right:has(.search-container:focus-within)`.
+
 ## Verification & Testing
 - Open a new tab in Chrome/Edge.
 - Hover over domain cards and click to verify springiness and click compression.
@@ -50,3 +55,4 @@ Enhance the physical feel and responsiveness of the Tab Out dashboard. By adding
 - Close multiple tabs rapidly to watch the combo counter scale up and shift colors.
 - Clear all tabs to trigger the Zen Mode empty state, verifying the breathing glow and random comfort quotes.
 - Toggle the archive to verify accordion expansion.
+- Focus the Search Bar (click or press `/`): watch header buttons smoothly collapse into elegant icon-only squircles. Blur search to watch them restore.
