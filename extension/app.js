@@ -1478,6 +1478,7 @@ document.addEventListener('click', async (e) => {
       setTimeout(() => { banner.style.display = 'none'; banner.style.opacity = '1'; }, 400);
     }
     showToast('Closed extra Tab Out tabs');
+    await renderStaticDashboard();
     return;
   }
 
@@ -1725,10 +1726,13 @@ document.addEventListener('click', async (e) => {
     playCloseSound();
     triggerCombo(closedCount);
 
-    // Hide the dedup button
+    // Hide the dedup button and trigger full UI update when animation completes
     actionEl.style.transition = 'opacity 0.2s';
     actionEl.style.opacity    = '0';
-    setTimeout(() => actionEl.remove(), 200);
+    setTimeout(async () => {
+      actionEl.remove();
+      await renderStaticDashboard();
+    }, 200);
 
     // Remove dupe badges from the card
     if (card) {
@@ -2273,12 +2277,18 @@ async function restoreSession() {
   // Play combo/restore sound
   playChimeSound();
 
-  // Create new tabs in the background in parallel and wait for all of them to be registered,
-  // preventing a race condition where fetchOpenTabs runs before the tabs are created in Chrome.
-  try {
-    await Promise.all(last_session_backup.map(url => chrome.tabs.create({ url, active: false })));
-  } catch (err) {
-    console.error('[tab-out] Failed to restore some tabs:', err);
+  // Get currently open URLs to avoid opening duplicates of tabs that are already open
+  const currentlyOpenUrls = new Set(openTabs.map(t => t.url));
+  const urlsToRestore = last_session_backup.filter(url => !currentlyOpenUrls.has(url));
+
+  if (urlsToRestore.length > 0) {
+    // Create new tabs in the background in parallel and wait for all of them to be registered,
+    // preventing a race condition where fetchOpenTabs runs before the tabs are created in Chrome.
+    try {
+      await Promise.all(urlsToRestore.map(url => chrome.tabs.create({ url, active: false })));
+    } catch (err) {
+      console.error('[tab-out] Failed to restore some tabs:', err);
+    }
   }
 
   // Update check-list: complete/archive those URLs
@@ -2296,7 +2306,11 @@ async function restoreSession() {
   // Re-fetch and update UI (this will also hide the Restore Session button)
   await renderStaticDashboard();
 
-  showToast(`Restored ${last_session_backup.length} tab${last_session_backup.length !== 1 ? 's' : ''}!`);
+  if (urlsToRestore.length === 0) {
+    showToast('All tabs from this session are already open!');
+  } else {
+    showToast(`Restored ${urlsToRestore.length} closed tab${urlsToRestore.length !== 1 ? 's' : ''}!`);
+  }
 }
 
 /**
