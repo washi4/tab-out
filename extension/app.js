@@ -1405,6 +1405,9 @@ async function renderStaticDashboard() {
   if (searchInput && searchInput.value) {
     filterTabs(searchInput.value);
   }
+
+  // --- Update session snapshot action buttons ---
+  await updateSessionButtonsVisibility();
 }
 
 async function renderDashboard() {
@@ -1425,6 +1428,21 @@ document.addEventListener('click', async (e) => {
   // This is crucial because browser security policies block AudioContext from starting
   // after asynchronous tasks (like 'await' commands).
   initAudioContext();
+
+  // ---- Handle Session Action Buttons (Snapshot & Restore) ----
+  const saveBtn = e.target.closest('#btnSaveSession');
+  if (saveBtn) {
+    e.preventDefault();
+    await saveCurrentSession();
+    return;
+  }
+
+  const restoreBtn = e.target.closest('#btnRestoreSession');
+  if (restoreBtn) {
+    e.preventDefault();
+    await restoreSession();
+    return;
+  }
 
   // Walk up the DOM to find the nearest element with data-action
   const actionEl = e.target.closest('[data-action]');
@@ -2154,6 +2172,109 @@ function initTechCursor() {
     dot.style.opacity = '1';
     ring.style.opacity = '1';
   });
+}
+
+
+/* ----------------------------------------------------------------
+   SESSION BACKUP & ONE-KEY RESTORE (REBOOT PROTECTION)
+   ---------------------------------------------------------------- */
+
+/**
+ * saveCurrentSession()
+ *
+ * One-key save all current open real tabs to "Saved for Later" checklist
+ * and backup their URLs for instant restoration.
+ */
+async function saveCurrentSession() {
+  const realTabs = getRealTabs();
+  if (realTabs.length === 0) {
+    showToast('No open tabs to save!');
+    return;
+  }
+
+  // Play satisfying save sound
+  playSaveSound();
+
+  // Save all real tabs to Saved for Later
+  for (const tab of realTabs) {
+    await saveTabForLater(tab);
+  }
+
+  // Backup these URLs specifically as the last session
+  const urls = realTabs.map(t => t.url);
+  await chrome.storage.local.set({ last_session_backup: urls });
+
+  // Close the open tabs programmatically with style & animations
+  const idsToClose = realTabs.map(t => t.id);
+  
+  // Trigger satisfying confetti & close animations on domain cards
+  const cards = document.querySelectorAll('.mission-card');
+  cards.forEach(card => animateCardOut(card));
+  
+  // Remove tabs in browser
+  await removeTabsSafely(idsToClose);
+
+  // Re-fetch and update UI
+  await fetchOpenTabs();
+  
+  showToast(`Saved session with ${urls.length} tab${urls.length !== 1 ? 's' : ''}. Safe to reboot!`);
+}
+
+/**
+ * restoreSession()
+ *
+ * One-key restore all tabs saved in the last session, and archive them
+ * from the checklist.
+ */
+async function restoreSession() {
+  const { last_session_backup = [] } = await chrome.storage.local.get('last_session_backup');
+  if (last_session_backup.length === 0) {
+    showToast('No saved session found!');
+    return;
+  }
+
+  // Play combo/restore sound
+  playChimeSound();
+
+  // Create new tabs in the background
+  for (const url of last_session_backup) {
+    chrome.tabs.create({ url, active: false });
+  }
+
+  // Update check-list: complete/archive those URLs
+  const { deferred = [] } = await chrome.storage.local.get('deferred');
+  const backupSet = new Set(last_session_backup);
+  deferred.forEach(item => {
+    if (backupSet.has(item.url)) {
+      item.completed = true;
+    }
+  });
+
+  // Clear session backup
+  await chrome.storage.local.set({ deferred, last_session_backup: [] });
+
+  // Re-fetch and update UI
+  await fetchOpenTabs();
+
+  showToast(`Restored ${last_session_backup.length} tab${last_session_backup.length !== 1 ? 's' : ''}!`);
+}
+
+/**
+ * updateSessionButtonsVisibility()
+ *
+ * Keeps the "Restore Session" button synced with the backup status.
+ */
+async function updateSessionButtonsVisibility() {
+  const btnRestore = document.getElementById('btnRestoreSession');
+  if (!btnRestore) return;
+
+  const { last_session_backup = [] } = await chrome.storage.local.get('last_session_backup');
+  if (last_session_backup && last_session_backup.length > 0) {
+    btnRestore.style.display = 'inline-flex';
+    btnRestore.querySelector('span').textContent = `Restore Session (${last_session_backup.length})`;
+  } else {
+    btnRestore.style.display = 'none';
+  }
 }
 
 

@@ -30,18 +30,36 @@
       <div class="date" id="dateDisplay"></div>
     </div>
 
-    <!-- ================================================================
-         GLOBAL SEARCH BAR — quickly filter open tabs across all cards
-         ================================================================ -->
-    <div class="search-container" id="searchBarContainer">
-      <div class="search-input-wrapper">
-        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
-        </svg>
-        <input type="text" id="globalSearch" placeholder="Search open tabs..." autocomplete="off">
-        <span class="search-shortcut" id="searchShortcut">/</span>
+    <div class="header-right">
+      <!-- Session Actions (Snapshot / Restore) -->
+      <div class="session-actions" id="sessionActions">
+        <button class="tactile-btn" id="btnSaveSession" title="Save and close all currently open tabs (perfect for reboots!)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Save Session</span>
+        </button>
+        <button class="tactile-btn secondary" id="btnRestoreSession" title="Restore all tabs from your last saved session" style="display: none;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 15l-6 5L3 15M9 20V4a2 2 0 012-2h4a2 2 0 012 2v16l-6-5z" />
+          </svg>
+          <span>Restore Session</span>
+        </button>
       </div>
-      <div class="search-dropdown" id="searchDropdown" style="display:none"></div>
+
+      <!-- ================================================================
+           GLOBAL SEARCH BAR — quickly filter open tabs across all cards
+           ================================================================ -->
+      <div class="search-container" id="searchBarContainer">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+          </svg>
+          <input type="text" id="globalSearch" placeholder="Search open tabs..." autocomplete="off">
+          <span class="search-shortcut" id="searchShortcut">/</span>
+        </div>
+        <div class="search-dropdown" id="searchDropdown" style="display:none"></div>
+      </div>
     </div>
   </header>
 
