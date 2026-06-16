@@ -2211,33 +2211,14 @@ async function saveCurrentSession() {
   // Play satisfying save sound
   playSaveSound();
 
-  // Save all real tabs to Saved for Later using a single atomic transaction
-  try {
-    await saveTabsForLater(realTabs);
-  } catch (err) {
-    console.error('[tab-out] Failed to batch save tabs:', err);
-    showToast('Failed to save session');
-    return;
-  }
-
   // Backup these URLs specifically as the last session
   const urls = realTabs.map(t => t.url);
   await chrome.storage.local.set({ last_session_backup: urls });
 
-  // Close the open tabs programmatically with style & animations
-  const idsToClose = realTabs.map(t => t.id);
-  
-  // Trigger satisfying confetti & close animations on domain cards
-  const cards = document.querySelectorAll('.mission-card');
-  cards.forEach(card => animateCardOut(card));
-  
-  // Remove tabs in browser
-  await removeTabsSafely(idsToClose);
-
-  // Re-fetch and update UI
+  // Re-fetch and update UI to show the Restore Session button with count
   await fetchOpenTabs();
   
-  showToast(`Saved session with ${urls.length} tab${urls.length !== 1 ? 's' : ''}. Safe to reboot!`);
+  showToast(`Backed up session with ${urls.length} tab${urls.length !== 1 ? 's' : ''}! Safe to reboot at any time.`);
 }
 
 /**
