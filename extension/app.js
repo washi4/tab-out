@@ -1668,6 +1668,32 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  const kbShortcutsBtn = e.target.closest('#btnKeyboardShortcuts');
+  if (kbShortcutsBtn) {
+    e.preventDefault();
+    openKeyboardModal();
+    return;
+  }
+
+  const kbCloseBtn = e.target.closest('#btnKeyboardModalClose') || e.target.closest('#btnKeyboardModalCloseOk');
+  if (kbCloseBtn) {
+    e.preventDefault();
+    closeKeyboardModal();
+    return;
+  }
+
+  // Backdrop click to close modals
+  if (e.target.id === 'workspaceModalBackdrop') {
+    e.preventDefault();
+    closeWorkspaceModal();
+    return;
+  }
+  if (e.target.id === 'keyboardModalBackdrop') {
+    e.preventDefault();
+    closeKeyboardModal();
+    return;
+  }
+
   const modalCloseBtn = e.target.closest('#btnWorkspaceModalClose') || e.target.closest('#btnWorkspaceModalCancel');
   if (modalCloseBtn) {
     e.preventDefault();
@@ -2488,6 +2514,17 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
+  const keyboardModalBackdrop = document.getElementById('keyboardModalBackdrop');
+  const isKbModalOpen = keyboardModalBackdrop && keyboardModalBackdrop.classList.contains('visible');
+
+  if (isKbModalOpen) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeKeyboardModal();
+    }
+    return;
+  }
+
   const active = document.activeElement;
   const isInput = active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable;
   
@@ -2930,6 +2967,30 @@ function openWorkspaceModal() {
  */
 function closeWorkspaceModal() {
   const backdrop = document.getElementById('workspaceModalBackdrop');
+  if (backdrop) {
+    backdrop.classList.remove('visible');
+  }
+}
+
+/**
+ * openKeyboardModal()
+ *
+ * Opens the Keyboard Shortcuts modal popup.
+ */
+function openKeyboardModal() {
+  const backdrop = document.getElementById('keyboardModalBackdrop');
+  if (backdrop) {
+    backdrop.classList.add('visible');
+  }
+}
+
+/**
+ * closeKeyboardModal()
+ *
+ * Closes the Keyboard Shortcuts modal popup.
+ */
+function closeKeyboardModal() {
+  const backdrop = document.getElementById('keyboardModalBackdrop');
   if (backdrop) {
     backdrop.classList.remove('visible');
   }

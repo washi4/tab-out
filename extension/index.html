@@ -175,6 +175,10 @@
         <div class="stat-num" id="statTabs">—</div>
         <div class="stat-label">Open tabs</div>
       </div>
+      <div class="stat" id="btnKeyboardShortcuts" style="cursor: pointer;" title="Show Vim Keyboard Navigation Shortcuts">
+        <div class="stat-num" style="font-size: 24px;">⌨️</div>
+        <div class="stat-label" style="border-bottom: 1px dashed var(--muted); padding-bottom: 2px;">Hotkeys Help</div>
+      </div>
     </div>
     <div class="last-refresh">
       <a href="https://github.com/washi4/tab-out" target="_blank" class="footer-link">Tab Out · Wayne Shi ↗</a>
@@ -238,6 +242,72 @@
 <!-- Custom Cyberpunk/Tech Cursor Elements -->
 <div class="tech-cursor-dot" id="techCursorDot"></div>
 <div class="tech-cursor-ring" id="techCursorRing"></div>
+
+<!-- ================================================================
+     KEYBOARD SHORTCUTS MODAL
+     ================================================================ -->
+<div class="workspace-modal-backdrop" id="keyboardModalBackdrop">
+  <div class="workspace-modal" id="keyboardModal" style="max-width: 440px;">
+    <div class="workspace-modal-header">
+      <h3 style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 20px;">⌨️</span> Keyboard Maestro Shortcuts
+      </h3>
+      <button class="modal-close-btn" id="btnKeyboardModalClose">&times;</button>
+    </div>
+    <div class="workspace-modal-body" style="gap: 16px;">
+      <div class="hotkey-section">
+        <div class="hotkey-group-title" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-amber); margin-bottom: 10px; border-bottom: 1px solid var(--warm-gray); padding-bottom: 4px;">Navigation (全键盘极速微操)</div>
+        <div class="hotkey-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+          <span class="hotkey-keys"><kbd style="background: rgba(90, 107, 122, 0.08); border: 1px solid var(--warm-gray); border-radius: 4px; padding: 2px 6px; box-shadow: 0 2px 0 var(--warm-gray); font-family: monospace;">Tab</kbd> / <kbd style="background: rgba(90, 107, 122, 0.08); border: 1px solid var(--warm-gray); border-radius: 4px; padding: 2px 6px; box-shadow: 0 2px 0 var(--warm-gray); font-family: monospace;">Shift-Tab</kbd></span>
+          <span class="hotkey-desc" style="color: var(--muted); text-align: right;">Cycle selection forward / backward</span>
+        </div>
+        <div class="hotkey-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+          <span class="hotkey-keys"><kbd style="background: rgba(90, 107, 122, 0.08); border: 1px solid var(--warm-gray); border-radius: 4px; padding: 2px 6px; box-shadow: 0 2px 0 var(--warm-gray); font-family: monospace;">j</kbd> / <kbd style="background: rgba(90, 107, 122, 0.08); border: 1px solid var(--warm-gray); border-radius: 4px; padding: 2px 6px; box-shadow: 0 2px 0 var(--warm-gray); font-family: monospace;">k</kbd></span>
+          <span class="hotkey-desc" style="color: var(--muted); text-align: right;">Selection Down / Up (Vim style)</span>
+        </div>
+        <div class="hotkey-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+          <span class="hotkey-keys"><kbd style="background: rgba(90, 107, 122, 0.08); border: 1px solid var(--warm-gray); border-radius: 4px; padding: 2px 6px; box-shadow: 0 2px 0 var(--warm-gray); font-family: monospace;">↑</kbd> / <kbd style="background: rgba(90, 107, 122, 0.08); border: 1px solid var(--warm-gray); border-radius: 4px; padding: 2px 6px; box-shadow: 0 2px 0 var(--warm-gray); font-family: monospace;">↓</kbd></span>
+          <span class="hotkey-desc" style="color: var(--muted); text-align: right;">Selection Up / Down</span>
+        </div>
+        <div class="hotkey-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+          <span class="hotkey-keys"><kbd style="background: rgba(90, 107, 122, 0.08); border: 1px solid var(--warm-gray); border-radius: 4px; padding: 2px 6px; box-shadow: 0 2px 0 var(--warm-gray); font-family: monospace;">/</kbd></span>
+          <span class="hotkey-desc" style="color: var(--muted); text-align: right;">Focus Autocomplete Search Box</span>
+        </div>
+      </div>
+      
+      <div class="hotkey-section" style="margin-top: 8px;">
+        <div class="hotkey-group-title" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-amber); margin-bottom: 10px; border-bottom: 1px solid var(--warm-gray); padding-bottom: 4px;">Actions (对选中标签页微操)</div>
+        <div class="hotkey-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+          <span class="hotkey-keys"><kbd style="background: rgba(90, 107, 122, 0.08); border: 1px solid var(--warm-gray); border-radius: 4px; padding: 2px 6px; box-shadow: 0 2px 0 var(--warm-gray); font-family: monospace;">Enter</kbd></span>
+          <span class="hotkey-desc" style="color: var(--muted); text-align: right;">Jump instantly to selected tab</span>
+        </div>
+        <div class="hotkey-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+          <span class="hotkey-keys"><kbd style="background: rgba(90, 107, 122, 0.08); border: 1px solid var(--warm-gray); border-radius: 4px; padding: 2px 6px; box-shadow: 0 2px 0 var(--warm-gray); font-family: monospace;">d</kbd></span>
+          <span class="hotkey-desc" style="color: var(--muted); text-align: right;">Close selected tab safely</span>
+        </div>
+        <div class="hotkey-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+          <span class="hotkey-keys"><kbd style="background: rgba(90, 107, 122, 0.08); border: 1px solid var(--warm-gray); border-radius: 4px; padding: 2px 6px; box-shadow: 0 2px 0 var(--warm-gray); font-family: monospace;">s</kbd></span>
+          <span class="hotkey-desc" style="color: var(--muted); text-align: right;">Save selected tab for later</span>
+        </div>
+        <div class="hotkey-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+          <span class="hotkey-keys"><kbd style="background: rgba(90, 107, 122, 0.08); border: 1px solid var(--warm-gray); border-radius: 4px; padding: 2px 6px; box-shadow: 0 2px 0 var(--warm-gray); font-family: monospace;">f</kbd></span>
+          <span class="hotkey-desc" style="color: var(--muted); text-align: right;">Freeze (Sleep) tab to save RAM</span>
+        </div>
+        <div class="hotkey-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+          <span class="hotkey-keys"><kbd style="background: rgba(90, 107, 122, 0.08); border: 1px solid var(--warm-gray); border-radius: 4px; padding: 2px 6px; box-shadow: 0 2px 0 var(--warm-gray); font-family: monospace;">Esc</kbd></span>
+          <span class="hotkey-desc" style="color: var(--muted); text-align: right;">Deselect or Clear selection</span>
+        </div>
+      </div>
+    </div>
+    <div class="workspace-modal-footer" style="margin-top: 8px;">
+      <button class="tactile-btn" id="btnKeyboardModalCloseOk" style="width: 100%; justify-content: center;">
+        <span>Got it! Let's Hack 🚀</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
 
 <!-- ================================================================
      PIXEL TAB PET — Fixed-floating responsive companion
