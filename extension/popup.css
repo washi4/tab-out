@@ -1,0 +1,336 @@
+/* ============================================================
+   Tab Out — Quick Search Popup Styles
+   Custom-built for ultra-lightweight, 50ms rendering
+   ============================================================ */
+
+:root {
+  --ink: #1a1613;
+  --paper: #f8f5f0;
+  --warm-gray: #e8e2da;
+  --muted: #9a918a;
+  --accent-amber: #c8713a;
+  --accent-sage: #5a7a62;
+  --accent-slate: #5a6b7a;
+  --accent-rose: #b35a5a;
+  --card-bg: #fffdf9;
+  --shadow: rgba(26, 22, 19, 0.06);
+  --selection-bg: rgba(90, 122, 98, 0.1);
+  --active-glow: rgba(90, 122, 98, 0.2);
+}
+
+:root.theme-cyberpunk, body.theme-cyberpunk {
+  --ink: #e0e6ed;
+  --paper: #060913;
+  --warm-gray: #151c2a;
+  --muted: #6b7a90;
+  --accent-amber: #ff007f;
+  --accent-sage: #00f0ff;
+  --accent-slate: #8b5cf6;
+  --accent-rose: #ff3366;
+  --card-bg: #0d1321;
+  --shadow: rgba(0, 240, 255, 0.15);
+  --selection-bg: rgba(0, 240, 255, 0.08);
+  --active-glow: rgba(0, 240, 255, 0.35);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  width: 420px;
+  height: 560px;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Base popup container */
+.popup-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* Subtle paper texture overlay (for Sage Paper mode) */
+body:not(.theme-cyberpunk)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Cyberpunk scanlines/grid background */
+body.theme-cyberpunk::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(0, 240, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.015) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Header & Search Wrapper */
+.search-header {
+  position: relative;
+  z-index: 10;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--warm-gray);
+  background: var(--paper);
+}
+
+.search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 14px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+#search-input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  background: var(--card-bg);
+  color: var(--ink);
+  border: 1px solid var(--warm-gray);
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+#search-input:focus {
+  border-color: var(--accent-sage);
+  box-shadow: 0 0 0 3px var(--active-glow);
+}
+
+body.theme-cyberpunk #search-input:focus {
+  border-color: var(--accent-sage);
+  box-shadow: 0 0 8px var(--accent-sage);
+}
+
+.search-badge {
+  position: absolute;
+  right: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--warm-gray);
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Scroll area for tab items */
+.tabs-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+  position: relative;
+  z-index: 5;
+}
+
+/* Custom scrollbar for Sage Paper */
+.tabs-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+.tabs-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tabs-scroll-area::-webkit-scrollbar-thumb {
+  background: var(--warm-gray);
+  border-radius: 3px;
+}
+.tabs-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Custom scrollbar for Cyberpunk */
+body.theme-cyberpunk .tabs-scroll-area::-webkit-scrollbar-track {
+  background: #060913;
+}
+body.theme-cyberpunk .tabs-scroll-area::-webkit-scrollbar-thumb {
+  background: #151c2a;
+  border: 1px solid var(--accent-sage);
+}
+body.theme-cyberpunk .tabs-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-sage);
+}
+
+/* List Items */
+.tabs-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Domain Group Header */
+.domain-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px 4px;
+  font-family: 'Newsreader', serif;
+  font-style: italic;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent-sage);
+}
+
+.domain-group-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  object-fit: contain;
+}
+
+.domain-group-count {
+  font-family: 'DM Sans', sans-serif;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--warm-gray);
+  color: var(--muted);
+  padding: 1px 5px;
+  border-radius: 10px;
+  margin-left: 4px;
+}
+
+/* Individual Tab Item */
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  position: relative;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.tab-item-favicon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.tab-item-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.tab-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-item-url {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+/* Selected Tab State (Key Nav and Hover) */
+.tab-item:hover, .tab-item.selected {
+  background: var(--selection-bg);
+  border-left-color: var(--accent-sage);
+}
+
+body.theme-cyberpunk .tab-item.selected {
+  box-shadow: inset 0 0 6px rgba(0, 240, 255, 0.15);
+}
+
+/* Close/Delete Button */
+.tab-item-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.tab-item:hover .tab-item-close {
+  opacity: 1;
+}
+
+.tab-item-close:hover {
+  background: var(--accent-rose);
+  color: #ffffff;
+}
+
+/* No results fallback */
+.no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  color: var(--muted);
+  font-family: 'Newsreader', serif;
+  font-style: italic;
+  font-size: 16px;
+}
+
+/* Popup Footer */
+.popup-footer {
+  position: relative;
+  z-index: 10;
+  padding: 10px 16px;
+  border-top: 1px solid var(--warm-gray);
+  background: var(--paper);
+}
+
+.footer-tips {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.key-hint {
+  font-family: monospace;
+  font-weight: 600;
+  background: var(--warm-gray);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.theme-cyberpunk .key-hint {
+  border-color: var(--warm-gray);
+}

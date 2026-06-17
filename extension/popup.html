@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tab Out - Quick Search</title>
+  
+  <!-- Google Fonts: Newsreader + DM Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body class="theme-sage">
+  <div class="popup-container">
+    <!-- Search Header -->
+    <header class="search-header">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search open tabs..." autofocus autocomplete="off">
+        <span class="search-badge">⌥⇧T</span>
+      </div>
+    </header>
+
+    <!-- Scrollable tab results -->
+    <main class="tabs-scroll-area">
+      <div id="tabs-list" class="tabs-list">
+        <!-- Tabs and domain headers are injected here dynamically -->
+      </div>
+    </main>
+
+    <!-- Compact footer with tips -->
+    <footer class="popup-footer">
+      <div class="footer-tips">
+        <span><kbd class="key-hint">↑↓</kbd> Navigate</span>
+        <span><kbd class="key-hint">Enter</kbd> Jump</span>
+        <span><kbd class="key-hint">Esc</kbd> Close</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -11,6 +11,16 @@
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png"
+    },
+    "default_popup": "popup.html"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+T",
+        "mac": "MacCtrl+Shift+T"
+      },
+      "description": "Show open tabs list instantly"
     }
   },
   "icons": {
