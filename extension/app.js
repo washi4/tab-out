@@ -3227,8 +3227,8 @@ function applyTheme(themeName) {
 
 
 // State for Profile
-let profileName = 'Adventurer';
-let profileEmoji = '🐱';
+var profileName = 'Adventurer';
+var profileEmoji = '🐱';
 
 /* ----------------------------------------------------------------
    INITIALIZE
