@@ -3226,6 +3226,10 @@ function applyTheme(themeName) {
 }
 
 
+// State for Profile
+let profileName = 'Adventurer';
+let profileEmoji = '🐱';
+
 /* ----------------------------------------------------------------
    INITIALIZE
    ---------------------------------------------------------------- */
@@ -3541,10 +3545,6 @@ window.notifyPetAction = notifyPetAction;
 /* ================================================================
    PROFILE SYSTEM STATE & EVENT BINDINGS
    ================================================================ */
-
-// State for Profile
-let profileName = 'Adventurer';
-let profileEmoji = '🐱';
 
 /**
  * initProfileSystem()
