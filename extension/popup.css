@@ -185,9 +185,16 @@ body.theme-cyberpunk .tabs-scroll-area::-webkit-scrollbar-thumb:hover {
 /* Domain Group Header */
 .domain-group-header {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px 4px;
+  position: relative;
+}
+
+.domain-group-left {
+  display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px 4px;
   font-family: 'Newsreader', serif;
   font-style: italic;
   font-size: 14px;
@@ -200,6 +207,39 @@ body.theme-cyberpunk .tabs-scroll-area::-webkit-scrollbar-thumb:hover {
   height: 14px;
   border-radius: 2px;
   object-fit: contain;
+}
+
+.domain-group-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'DM Sans', sans-serif;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-rose);
+  background: transparent;
+  border: 1px solid var(--accent-rose);
+  padding: 2px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  user-select: none;
+}
+
+.domain-group-header:hover .domain-group-close {
+  opacity: 1;
+}
+
+.domain-group-close:hover {
+  background: var(--accent-rose);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(179, 90, 90, 0.25);
+}
+
+body.theme-cyberpunk .domain-group-close:hover {
+  box-shadow: 0 0 8px var(--accent-rose);
 }
 
 .domain-group-count {

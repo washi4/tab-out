@@ -126,10 +126,22 @@ function renderList() {
       const headerDiv = document.createElement('div');
       headerDiv.className = 'domain-group-header';
       headerDiv.innerHTML = `
-        <img class="domain-group-icon" src="${faviconUrl}" onerror="this.style.display='none';">
-        <span>${domain}</span>
-        <span class="domain-group-count">${groups[domain].length}</span>
+        <div class="domain-group-left">
+          <img class="domain-group-icon" src="${faviconUrl}" onerror="this.style.display='none';">
+          <span>${domain}</span>
+          <span class="domain-group-count">${groups[domain].length}</span>
+        </div>
+        ${domain !== 'System Pages' ? `<div class="domain-group-close" title="Close all tabs in this domain">Close all</div>` : ''}
       `;
+      
+      const closeBtn = headerDiv.querySelector('.domain-group-close');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          closeDomain(domain, groups[domain]);
+        });
+      }
+      
       tabsList.appendChild(headerDiv);
       
       // Tabs within this domain
@@ -251,6 +263,28 @@ async function closeTab(tabId) {
     updateSelection();
   } catch (err) {
     console.error('[tab-out] Failed to close tab:', err);
+  }
+}
+
+// Close all tabs of a domain directly from the popup
+async function closeDomain(domainName, tabGroup) {
+  try {
+    // Play synthesis feedback sound
+    playCloseSound();
+    
+    // Extract tab IDs from group
+    const tabIds = tabGroup.map(t => t.id);
+    
+    // Close in browser
+    await chrome.tabs.remove(tabIds);
+    
+    // Sync local array
+    allTabs = allTabs.filter(t => !tabIds.includes(t.id));
+    
+    // Re-render
+    renderList();
+  } catch (err) {
+    console.error('[tab-out] Failed to close domain:', err);
   }
 }
 
