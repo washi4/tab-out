@@ -17,8 +17,7 @@
   "commands": {
     "_execute_action": {
       "suggested_key": {
-        "default": "Alt+Shift+T",
-        "mac": "MacCtrl+Shift+T"
+        "default": "Alt+Shift+T"
       },
       "description": "Show open tabs list instantly"
     }
