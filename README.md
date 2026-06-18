@@ -65,6 +65,18 @@ You'll see Tab Out.
 
 ---
 
+## Customizing Shortcuts
+
+Tab Out comes with `Alt+Shift+T` (or `⌥⇧T` on Mac) as the default global shortcut to summon the search popup from *any* page. You can easily customize this keybinding to your liking:
+
+1. Open Chrome and navigate to `chrome://extensions/shortcuts` (or Edge and go to `edge://extensions/shortcuts`).
+2. Scroll down to find **Tab Out**.
+3. Click inside the input field next to **"Activate the extension"** (or click the edit pencil icon).
+4. Press your preferred key combination (e.g., `Ctrl+Shift+Space`, `Alt+O`, etc.).
+5. Select **"Global"** instead of "In Chrome" if you want to summon your tab-search panel even when your browser is in the background!
+
+---
+
 ## How it works
 
 ```
