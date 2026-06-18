@@ -223,19 +223,21 @@ body.theme-cyberpunk .tabs-scroll-area::-webkit-scrollbar-thumb:hover {
   padding: 2px 8px;
   border-radius: 10px;
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.45;
   transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
   user-select: none;
 }
 
 .domain-group-header:hover .domain-group-close {
-  opacity: 1;
+  opacity: 0.85;
 }
 
 .domain-group-close:hover {
+  opacity: 1 !important;
   background: var(--accent-rose);
   color: #ffffff;
   box-shadow: 0 2px 8px rgba(179, 90, 90, 0.25);
+  transform: scale(1.08);
 }
 
 body.theme-cyberpunk .domain-group-close:hover {
@@ -314,23 +316,39 @@ body.theme-cyberpunk .tab-item.selected {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   color: var(--muted);
-  font-size: 12px;
-  opacity: 0;
-  transition: all 0.15s ease;
+  font-size: 16px;
+  font-weight: bold;
+  opacity: 0.35;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
   user-select: none;
+  border: 1px solid transparent;
 }
 
 .tab-item:hover .tab-item-close {
-  opacity: 1;
+  opacity: 0.75;
+  color: var(--accent-rose);
+  border-color: rgba(179, 90, 90, 0.15);
+}
+
+body.theme-cyberpunk .tab-item:hover .tab-item-close {
+  border-color: rgba(255, 51, 102, 0.15);
 }
 
 .tab-item-close:hover {
-  background: var(--accent-rose);
-  color: #ffffff;
+  opacity: 1 !important;
+  background: var(--accent-rose) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  transform: scale(1.2);
+  box-shadow: 0 2px 6px rgba(179, 90, 90, 0.3);
+}
+
+body.theme-cyberpunk .tab-item-close:hover {
+  box-shadow: 0 0 10px var(--accent-rose);
 }
 
 /* No results fallback */

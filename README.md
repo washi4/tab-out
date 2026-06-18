@@ -36,6 +36,7 @@ The agent will walk you through it. Takes about 1 minute.
 - **Workspace Session Manager** — Group selected open tabs into distinct, named custom workspaces. Restore, manage, or delete them in the right sidebar.
 - **Keyboard Maestro (Vim Style)** — Mouse-free master navigation! Select tabs with `Tab`/`Shift-Tab`, Vim `j`/`k`, or Arrows, then hit `Enter` to focus, `d` to close, `s` to save, or `f` to freeze.
 - **Autocomplete Command Palette** — Press `/` to focus the search bar, filter open tabs instantly, and use keyboard arrows to jump to them.
+- **Global Quick Search Popup & Shortcut** — Tap `Alt+Shift+T` (or `⌥⇧T` on Mac) on *any* web page to instantly summon a clean floating search popup. View your open tabs grouped by domain/localhost port, close tabs instantly with hover scale-up buttons, and navigate entirely with your keyboard (Arrows, Tab, Enter)!
 - **Theme Switcher** — Seamlessly toggle between "Sage Paper" (warm organic light mode) and "Cyber Deck" (matrix cyberpunk dark mode), complete with distinct synthesizer sweeps and matching confetti bursts.
 - **Local Profile Customizer** — Click your avatar in the left-top corner to instantly change your name and select from beautiful pixel emojis, featuring tactile Web Audio arpeggio feedback.
 - **Pixel Tab Pet Companion** — Mochi the Cat (Sage Green) or Byte the Robot (Cyber Deck) lives on your tab, reacting to your page cleanups, saves, and profile edits with cute animations and speech bubbles.
@@ -61,6 +62,18 @@ git clone https://github.com/washi4/tab-out.git
 **3. Open a new tab**
 
 You'll see Tab Out.
+
+---
+
+## Customizing Shortcuts
+
+Tab Out comes with `Alt+Shift+T` (or `⌥⇧T` on Mac) as the default global shortcut to summon the search popup from *any* page. You can easily customize this keybinding to your liking:
+
+1. Open Chrome and navigate to `chrome://extensions/shortcuts` (or Edge and go to `edge://extensions/shortcuts`).
+2. Scroll down to find **Tab Out**.
+3. Click inside the input field next to **"Activate the extension"** (or click the edit pencil icon).
+4. Press your preferred key combination (e.g., `Ctrl+Shift+Space`, `Alt+O`, etc.).
+5. Select **"Global"** instead of "In Chrome" if you want to summon your tab-search panel even when your browser is in the background!
 
 ---
 
